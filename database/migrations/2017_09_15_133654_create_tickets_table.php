@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Migrations\Migration;
 
-class CreateStateTable extends Migration
+class CreateTicketsTable extends Migration
 {
     /**
      * Run the migrations.
@@ -13,17 +13,18 @@ class CreateStateTable extends Migration
      */
     public function up()
     {
-  Schema::create('states', function (Blueprint $table) {
+        Schema::create('tickets', function (Blueprint $table) {
             $table->increments('id');
-			$table->string('name');
-			$table->string('type');
+			$table->string('sysid');
+			$table->string('type')->default(3);
+			$table->string('title');
+			$table->string('description');
+			$table->integer('level');
 			$table->boolean('resolved')->default(0);
-			$table->boolean('processed')->default(0);
-			$table->integer('incident_id')->nullable();
-			$table->json('options')->nullable();			
+			$table->json('options')->nullable();
             $table->timestamps();
 			$table->softDeletes();
-		});
+        });
     }
 
     /**
@@ -33,6 +34,6 @@ class CreateStateTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('state');
+        Schema::dropIfExists('tickets');
     }
 }

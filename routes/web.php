@@ -10,7 +10,10 @@
 | contains the "web" middleware group. Now create something great!
 |
 */
+use App\Event;
+use App\State;
 use App\Incident;
+use App\Ticket;
 
 Route::get('/', function () {
     return view('welcome');
@@ -32,6 +35,18 @@ Route::get('/recent', 'IncidentsController@process_events');
 
 Route::get('/timetest/{time1}/{time2}', 'IncidentsController@get_event_window');
 
+Route::get('events', function() {
+	return view('events',['events' => Event::all()]);
+});
+
+Route::get('states', function() {
+	return view('states',['states' => State::all()]);
+});
+
 Route::get('incidents', function() {
 	return view('incidents',['incidents' => Incident::all()]);
+});
+
+Route::get('tickets', function() {
+	return view('tickets',['tickets' => Ticket::all()]);
 });

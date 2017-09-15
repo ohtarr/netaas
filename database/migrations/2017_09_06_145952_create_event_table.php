@@ -21,7 +21,7 @@ class CreateEventTable extends Migration
 
 			$table->string('name');
 			$table->string('type');
-			$table->boolean('state');
+			$table->boolean('resolved');
 			$table->string('title')->nullable();
 			$table->string('message')->nullable();
 			$table->string('timestamp')->nullable();

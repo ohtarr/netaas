@@ -75,25 +75,16 @@ class ProcessStates extends Command
 		$time1 = $state->created_at->subMinutes(10) . "\n";
 		$time2 = $state->created_at->addMinutes(10) . "\n";
 		//$sitestate = State::where('type','device')->whereBetween('created_at', array($time1, $time2))->get();
-		$sitestates = State::where('name', 'like', '%' . $sitecode . '%')->where('type','device')->whereBetween('created_at', array($time1, $time2))->where('id','<>',$state->id)->get();
-		if($sitestates->isEmpty())
-		{
-			print "No other site states found!\n";
-			return null;
-		}
-		print "Found " . $sitestates->count() . " other site devices!\n";
+		$sitestates = State::where('name', 'like', '%' . $sitecode . '%')->where('type','device')->whereBetween('created_at', array($time1, $time2))->get();
 		return $sitestates;
 	}	
 	
 	public function create_site_incident($state)
 	{
 		print "Creating a SITE incident....";
-		$sitecode = $this->get_sitecode($state);
-		$name = $sitecode;
-		$type = "site";
 		$newinc = Incident::create([
-			'name'		=>	$name,
-			'type'		=>	$type,
+			'name'		=>	$this->get_sitecode($state),
+			'type'		=>	'site',
 		]);
 		$state->incident_id = $newinc->id;
 		$state->save();
@@ -102,47 +93,21 @@ class ProcessStates extends Command
 	
 	public function create_device_incident($state)
 	{
-		$name = $state->name;
-		$type = "device";
 		$newinc = Incident::create([
-			'name'		=>	$name,
-			'type'		=>	$type,
+			'name'		=>	$state->name,
+			'type'		=>	'device',
 		]);
 		$state->incident_id = $newinc->id;
 		$state->save();
 		print "Created a " . $type . " incident " . $newinc->id . "\n";
 	}
-
-/*
-	public function create_incident($state)
-	{
-		$sitecode = $this->get_sitecode($state);
-		if ($sitestates = $this->find_site_states($state))  //If there are other STATES from the same site, create a SITE incident
-		{
-			print "Detected other states from site " . $sitecode . "...\n";
-			$name = $sitecode;
-			$type = "site";
-		} else { // No other states from same site and device is down, create a single device incident.
-			print "Detected no other states from site " . $sitecode . "...\n";
-			$name = $state->name;
-			$type = "device";
-		}
-		$newinc = Incident::create([
-			'name'		=>	$name,
-			'type'		=>	$type,
-		]);
-		$state->incident_id = $newinc->id;
-		$state->save();
-		print "Created a " . $type . " incident " . $newinc->id . "\n";
-	}
-/**/
 
 	//Process any states that do not currently have an incident assigned.
 	public function process_states()
 	{
 		print "Processing States...\n";
 		// GET the state of DEVICES detected by event information
-		$tenminsago = Carbon::now()->subMinutes(10);  //data 10 minutes ago.
+		$tenminsago = Carbon::now()->subMinutes(1);  //data 10 minutes ago.
 		$states = State::where('incident_id', null)->where('type','device')->where('created_at','<', $tenminsago)->get();
 		if($states->isEmpty()) {
             //throw new \Exception('ERROR: I didnt get any states from the database whatever that is');
@@ -156,6 +121,7 @@ class ProcessStates extends Command
                 //$this->log('Exception crap happened: '.$e->getMessage());
             }
         }
+		$this->resolve_incidents();
     }
 
 	//Process incidents for given state
@@ -168,17 +134,17 @@ class ProcessStates extends Command
 			print "Found existing " . $incident->type . " incident ID " . $incident->id . "\n";
 			$state->incident_id = $incident->id;
 			$state->save();
-		} elseif ($sitestates = $this->find_site_states($state)){
+		} elseif ($this->find_site_states($state)->count() > 1){
 			//If there are multiple devices from the same site, create a SITE INCIDENT
 			$incident = $this->create_site_incident($state);
 			$state->incident_id = $incident->id;
 			$state->save();
-		} elseif ($state->state == 0) {
+		} elseif ($state->resolved == 0) {
 			//If the device is still down, create a device incident.
 			$incident = $this->create_device_incident($state);
 			$state->incident_id = $incident->id;
 			$state->save();
-		} elseif ($state->state == 1 && $state->created_at < Carbon::now()->subMinutes(30)) {
+		} elseif ($state->resolved == 1 && $state->created_at < Carbon::now()->subMinutes(5)) {
 			//If device is restored, not assigned to an incident, no incident found, and is 4 hours old, delete.
 			print "Device state is online with no active incidents and is stale.  Deleting STATE!\n";
 			$state->delete();
@@ -186,4 +152,31 @@ class ProcessStates extends Command
 			print "Device state is online with no active incidents.  Waiting a bit longer...\n";
 		}
 	}
+	
+	public function resolve_incidents()
+	{
+		$states = State::where('incident_id', '<>', null)->get();
+		if($states->isNotEmpty())
+		{
+			foreach($states as $state)
+			{
+				$incidentids[] = $state->incident_id;
+			}
+			$incidentids = array_unique($incidentids);
+			foreach($incidentids as $incidentid)
+			{
+				$incstates = State::where('incident_id',$incidentid)->where('resolved',0)->get();
+				if($incstates->isEmpty())
+				{
+					$incident = Incident::find($incidentid);
+					$incident->resolved = 1;
+					$incident->save();
+				}
+				
+			}
+		}
+	}
+
+
+	
 }

@@ -40,7 +40,6 @@ class ProcessEvents extends Command
     public function handle()
     {
 		$this->process_events();
-		//$this->update_state("balls2", 1);
     }
 
 	public function process_events()
@@ -53,10 +52,25 @@ class ProcessEvents extends Command
 			foreach($events as $event)
 			{
 				print "Processing event for device " . $event->name . "...\n";
-				$state = State::updateOrCreate(
-					['name' => $event->name, 'type' => $event->type],
-					['state' => $event->state,'processed' => 0]
-				);
+				if($state = State::where('name', $event->name)->first())
+				{
+					$state->resolved = $event->resolved;
+					$state->processed = 0;
+					$state->save();
+					/*
+					$state = State::updateOrCreate(
+						['name' => $event->name, 'type' => $event->type],
+						['resolved' => $event->resolved , 'processed' => 0]
+					);
+					/**/
+				} else {
+					$state = State::create([
+						'name'		=>	$event->name,
+						'type'		=>	$event->type,
+						'resolved'	=>	$event->resolved,
+						'processed'	=>	0,
+					]);
+				}
 				if($state)
 				{
 					$event->processed = 1;
@@ -66,8 +80,5 @@ class ProcessEvents extends Command
 		} else {
 			print "NO EVENTS TO PROCESS!\n";
 		}
-
 	}
-
-
 }

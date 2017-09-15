@@ -31,24 +31,28 @@
 	<table>
 	<tr>
 		<th>ID</th>
-		<th>NAME</th>
+		<th>SYSID</th>
 		<th>TYPE</th>
+		<th>TITLE</th>
+		<th>DESCRIPTION</th>
+		<th>LEVEL</th>
 		<th>RESOLVED</th>
-		<th>TICKET</th>
 		<th>CREATED_AT</th>
 		<th>UPDATED_AT</th>
 		<th>DELETED_AT</th>
 	</tr>
-    @foreach ($incidents as $incident)
+    @foreach ($tickets as $ticket)
 		<tr>
-			<td>{{ $incident->id }}</td>
-			<td>{{ $incident->name }}</td>
-			<td>{{ $incident->type }}</td>
-			<td>{{ $incident->resolved }}</td>
-			<td>{{ $incident->resolved }}</td>
-			<td>{{ $incident->created_at }}</td>
-			<td>{{ $incident->updated_at }}</td>
-			<td>{{ $incident->deleted_at }}</td>
+			<td>{{ $ticket->id }}</td>
+			<td>{{ $ticket->sysid }}</td>
+			<td>{{ $ticket->type }}</td>
+			<td>{{ $ticket->title }}</td>
+			<td>{{ $ticket->description }}</td>
+			<td>{{ $ticket->level }}</td>
+			<td>{{ $ticket->resolved }}</td>
+			<td>{{ $ticket->created_at }}</td>
+			<td>{{ $ticket->updated_at }}</td>
+			<td>{{ $ticket->deleted_at }}</td>
 		</tr>
     @endforeach
 	</table>

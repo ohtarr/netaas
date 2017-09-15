@@ -31,24 +31,28 @@
 	<table>
 	<tr>
 		<th>ID</th>
+		<th>SRC_IP</th>
 		<th>NAME</th>
 		<th>TYPE</th>
 		<th>RESOLVED</th>
-		<th>TICKET</th>
+		<th>TITLE</th>
+		<th>PROCESSED</th>
 		<th>CREATED_AT</th>
 		<th>UPDATED_AT</th>
 		<th>DELETED_AT</th>
 	</tr>
-    @foreach ($incidents as $incident)
+    @foreach ($events as $event)
 		<tr>
-			<td>{{ $incident->id }}</td>
-			<td>{{ $incident->name }}</td>
-			<td>{{ $incident->type }}</td>
-			<td>{{ $incident->resolved }}</td>
-			<td>{{ $incident->resolved }}</td>
-			<td>{{ $incident->created_at }}</td>
-			<td>{{ $incident->updated_at }}</td>
-			<td>{{ $incident->deleted_at }}</td>
+			<td>{{ $event->id }}</td>
+			<td>{{ $event->src_ip }}</td>
+			<td>{{ $event->name }}</td>
+			<td>{{ $event->type }}</td>
+			<td>{{ $event->resolved }}</td>
+			<td>{{ $event->title }}</td>
+			<td>{{ $event->processed }}</td>
+			<td>{{ $event->created_at }}</td>
+			<td>{{ $event->updated_at }}</td>
+			<td>{{ $event->deleted_at }}</td>
 		</tr>
     @endforeach
 	</table>

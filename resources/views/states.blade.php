@@ -34,21 +34,23 @@
 		<th>NAME</th>
 		<th>TYPE</th>
 		<th>RESOLVED</th>
-		<th>TICKET</th>
+		<th>PROCESSED</th>
+		<th>INCIDENT_ID</th>
 		<th>CREATED_AT</th>
 		<th>UPDATED_AT</th>
 		<th>DELETED_AT</th>
 	</tr>
-    @foreach ($incidents as $incident)
+    @foreach ($states as $state)
 		<tr>
-			<td>{{ $incident->id }}</td>
-			<td>{{ $incident->name }}</td>
-			<td>{{ $incident->type }}</td>
-			<td>{{ $incident->resolved }}</td>
-			<td>{{ $incident->resolved }}</td>
-			<td>{{ $incident->created_at }}</td>
-			<td>{{ $incident->updated_at }}</td>
-			<td>{{ $incident->deleted_at }}</td>
+			<td>{{ $state->id }}</td>
+			<td>{{ $state->name }}</td>
+			<td>{{ $state->type }}</td>
+			<td>{{ $state->resolved }}</td>
+			<td>{{ $state->processed }}</td>
+			<td>{{ $state->incident_id }}</td>
+			<td>{{ $state->created_at }}</td>
+			<td>{{ $state->updated_at }}</td>
+			<td>{{ $state->deletedat }}</td>
 		</tr>
     @endforeach
 	</table>

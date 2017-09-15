@@ -17,9 +17,9 @@ class CreateIncidentTable extends Migration
 			$table->increments('id');
 			$table->string('name');
 			$table->string('type');
-			$table->boolean('active')->default(1);
+			$table->boolean('resolved')->default(0);
 			//$table->boolean('state')->default(0);
-			$table->json('ticket')->nullable();
+			$table->string('ticket')->nullable();
 			$table->json('options')->nullable();
 			$table->timestamps();
 			$table->softDeletes();
