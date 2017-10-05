@@ -47,9 +47,10 @@ class EventsTableSeeder extends Seeder
 				'src_type'			=> "netmon",
 				'name'				=> $device,
 				'type'				=> "device",
-				'state'				=> 0,
+				'resolved'			=> 0,
 			]);		
 		}
+		/*
 		$devices = [
 			"khonelabrwa01",
 			"khonelabswd01",
@@ -68,9 +69,9 @@ class EventsTableSeeder extends Seeder
 				'src_type'			=> "netmon",
 				'name'				=> $device,
 				'type'				=> "port",
-				'state'				=> 0,
+				'resolved'			=> 0,
 			]);		
 		}
-
+		/**/
     }
 }

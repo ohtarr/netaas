@@ -45,7 +45,7 @@
 			<td>{{ $incident->name }}</td>
 			<td>{{ $incident->type }}</td>
 			<td>{{ $incident->resolved }}</td>
-			<td>{{ $incident->resolved }}</td>
+			<td>{{ $incident->ticket }}</td>
 			<td>{{ $incident->created_at }}</td>
 			<td>{{ $incident->updated_at }}</td>
 			<td>{{ $incident->deleted_at }}</td>

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Incidents</title>
+    <title>Tickets</title>
 
     <!-- CSS -->
     <!-- BOOTSTRAP -->
