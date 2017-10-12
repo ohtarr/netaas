@@ -46,11 +46,45 @@ class State extends Model
 	}
 	/**/
 	
+	public function get_unassigned_site_states()
+	{
+		return State::where('name', 'like', '%' . $this->get_sitecode() . '%')->where('type','device')->whereNull("incident_id")->get();
+	}
+	/*
 	public function get_recent_site_states()
 	{
-		$time1 = Carbon::parse($this->updated_at)->subMinutes(10);
-		$time2 = Carbon::parse($this->updated_at)->addMinutes(10);
-		return State::where('name', 'like', '%' . $this->get_sitecode() . '%')->where('type','device')->whereBetween('created_at', array($time1, $time2))->get();
+		$time1 = $this->updated_at->subMinutes(10);
+		$time2 = $this->updated_at->addMinutes(10);
+		$sitestates =  State::where('name', 'like', '%' . $this->get_sitecode() . '%')->where('type','device')->whereBetween('created_at', array($time1, $time2))->get();
+		return $sitestates;
+	}
+	/**/
+	public function find_device_incident()
+	{
+		//Check for any existing DEVICE incident that has our device name
+		$deviceincident = Incident::where('type', "device")->where('name', $this->name)->first();
+		//If a device incident exists with our device name
+		if($deviceincident)
+		{
+			//Save the incident ID in our state incident_id and return the incident.
+			$this->incident_id = $deviceincident->id;
+			$this->save();
+			return $deviceincident;
+		}	
+	}
+	
+	public function find_site_incident()
+	{
+		//Check for any exisiting SITE incidents that have our site id in the name
+		$siteincident = Incident::where('type', "site")->where('name', $this->get_sitecode())->first();
+		//If a site incident exists with our site code
+		if($siteincident)
+		{
+			//Save the incident ID in our state incident_id and return the incident.
+			$this->incident_id = $siteincident->id;
+			$this->save();
+			return $siteincident;
+		}	
 	}
 	
 	//Locate an existing incident for this state.
@@ -61,30 +95,28 @@ class State extends Model
 		{
 			//find it and return that incident
 			$incident = Incident::find($this->incident_id);
+			//If the incident_id coorelates to an actual incident, return it, otherwise remove the ID and let it find a new ticket.
+			if($incident)
+			{
+				return $incident;
+			} else {
+				$this->incident_id = null;
+				$this->save();
+			}
+		}
+		$incident = $this->find_device_incident();
+		if($incident)
+		{
+			print "Found DEVICE incident ID: " . $incident->id . "\n";
 			return $incident;
 		}
-		//Check for any existing DEVICE incident that has our device name
-		$deviceincident = Incident::where('type', "device")->where('name', $this->name)->first();
-		//If a device incident exists with our device name
-		if($deviceincident)
+		$incident = $this->find_site_incident();
+		if($incident)
 		{
-			//Save the incident ID in our state incident_id and return the incident.
-			print "Found DEVICE incident ID: " . $deviceincident->id . "\n";
-			$this->incident_id = $deviceincident->id;
-			$this->save();
-			return $deviceincident;
+			print "Found SITE incident ID: " . $incident->id . "\n";
+			return $incident;
 		}
-		//Check for any exisiting SITE incidents that have our site id in the name
-		$siteincident = Incident::where('type', "site")->where('name', $this->get_sitecode())->first();
-		//If a site incident exists with our site code
-		if($siteincident)
-		{
-			//Save the incident ID in our state incident_id and return the incident.
-			print "Found SITE incident ID: " . $siteincident->id . "\n";
-			$this->incident_id = $siteincident->id;
-			$this->save();
-			return $siteincident;
-		}
+
 		//No found incidents = Return null!
 		print "No incident found!\n";
 		return null;
@@ -96,33 +128,27 @@ class State extends Model
 		//Find any existing incidents.
 		$incident = $this->find_incident();
 		//Find any other states with same site code.
-		$sitestates = $this->get_recent_site_states();
+		$sitestates = $this->get_unassigned_site_states();
 		//If no incident is found
 		if (!$incident)
 		{
 			//If there is more than 1 device with same site code in state table
 			if($sitestates->count() > 1)
 			{
-				//Create a SITE incident for multiple devices!
+				//Create a SITE incident for multiple devices, even if they are resolved.
 				$incident = $this->create_incident($this->get_sitecode(), 'site');
+				foreach($sitestates as $sitestate)
+				{
+					$sitestate->incident_id = $incident->id;
+					$sitestate->save();
+				}
 			//If there is only 1 device and it is NOT resolved
 			} elseif (!$this->resolved) {
 				//Create a device incident for single device.
 				$incident = $this->create_incident($this->name, 'device');
+				$this->incident_id = $incident->id;
+				$this->save();
 			}
-		}
-		//Assign the incident id to the states incident_id field.
-		if($incident)
-		{
-			$this->incident_id = $incident->id;
-			$this->save();
-		}
-		//If this state is NOT resolved,
-		if (!$this->resolved)
-		{
-			//make sure the incident is not resolved.
-			$incident->resolved = 0;
-			$incident->save();
 		}
 		//Return the incident
 		return $incident;
@@ -147,8 +173,11 @@ class State extends Model
 		$incident = Incident::find($this->incident_id);
 		if($incident)
 		{
-			$ticket = Ticket::where('sysid', $incident->ticket)->first();
-			//COMMENT CODE HERE!
+			$ticket = $incident->get_ticket();
+			if($ticket)
+			{
+				$ticket->add_comment($comment);
+			}
 		}
 	}
 
@@ -160,7 +189,7 @@ class State extends Model
 		//Time 30 minutes prior to last update
 		$mins = Carbon::now()->subMinutes(30);
 		//If it hasn't been updated in 30 mintes, there is no incident, and it is marked RESOLVED
-		if(Carbon::parse($this->updated_at)->lt($mins) && !$incident && $this->resolved)
+		if($this->updated_at->lt($mins) && !$incident && $this->resolved)
 		{
 			//DELETE IT!
 			$this->delete();
@@ -175,6 +204,12 @@ class State extends Model
 		{
 			$this->process_stale();
 		} else {
+			if($this->resolved)
+			{
+				$this->comment_ticket("Device " . $this->name . " has RECOVERED.");
+			} else {
+				$this->comment_ticket("Device " . $this->name . " has generated an ALERT.");
+			}
 			$this->processed = 1;
 			$this->save();
 		}

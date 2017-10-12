@@ -19,21 +19,7 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Route::get('foo', function () {
-    return "Hello!";
-});
-
-Route::view('/welcome', 'welcome', ['name' => 'Taylor']);
-
-Route::get('/test', 'Events@test');
-
-Route::get('/add/{name}', 'EventsController@addDB');
-
 Route::post('/netmon/', 'EventsController@Netmon');
-
-Route::get('/recent', 'IncidentsController@process_events');
-
-Route::get('/timetest/{time1}/{time2}', 'IncidentsController@get_event_window');
 
 Route::get('events', function() {
 	return view('events',['events' => Event::all()]);
@@ -49,4 +35,8 @@ Route::get('incidents', function() {
 
 Route::get('tickets', function() {
 	return view('tickets',['tickets' => Ticket::all()]);
+});
+
+Route::get('test', function() {
+	return view('child');
 });
