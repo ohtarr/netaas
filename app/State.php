@@ -23,42 +23,12 @@ class State extends Model
 		//Return the sitecode!
 		return $sitecode;
 	}
-
-	/*
-	//Locate all other STATES with same site code, +/- 10 minutes ago, do not include self..
-	public function find_site_states()
-	{
-		//Get our site code
-		$sitecode = $this->get_sitecode();
-		$time1 = $this->created_at->subMinutes(10);
-		$time2 = $this->created_at->addMinutes(10);
-		//Search for any states that have our sitecode in their name, type device, and were created 10 minutes before or after our state was created.  Do not include ourself.
-		$sitestates = State::where('name', 'like', '%' . $sitecode . '%')->where('type','device')->whereBetween('created_at', array($time1, $time2))->where('incident_id', null)->where('id',"<>", $this->id)->get();
-		//Return collection of states that match!
-		return $sitestates;
-	}
-	/**/
-	
-	/*
-	public function get_site_states()
-	{
-		return State::where('name', 'like', '%' . $this->get_sitecode() . '%')->where('type','device')->get();
-	}
-	/**/
 	
 	public function get_unassigned_site_states()
 	{
 		return State::where('name', 'like', '%' . $this->get_sitecode() . '%')->where('type','device')->whereNull("incident_id")->get();
 	}
-	/*
-	public function get_recent_site_states()
-	{
-		$time1 = $this->updated_at->subMinutes(10);
-		$time2 = $this->updated_at->addMinutes(10);
-		$sitestates =  State::where('name', 'like', '%' . $this->get_sitecode() . '%')->where('type','device')->whereBetween('created_at', array($time1, $time2))->get();
-		return $sitestates;
-	}
-	/**/
+
 	public function find_device_incident()
 	{
 		//Check for any existing DEVICE incident that has our device name
@@ -157,7 +127,7 @@ class State extends Model
 	//Created an incident in the incident table
 	public function create_incident($name, $type)
 	{
-		print "Creating a new incident....";
+		print "Creating a new incident for " . $this->name . "\n";
 		//Create a new incident with provided name and type.
 		$newinc = Incident::create([
 			'name'		=>	$name,
@@ -176,6 +146,7 @@ class State extends Model
 			$ticket = $incident->get_ticket();
 			if($ticket)
 			{
+				print $this->name . " ADD COMMENT: " . $comment . "\n";
 				$ticket->add_comment($comment);
 			}
 		}
@@ -184,6 +155,7 @@ class State extends Model
 	//Check if this is a stale state that is no longer needed.  DELETE if stale.
 	public function process_stale()
 	{
+		print "processing Stale States \n";
 		//Check for existing incident
 		$incident = $this->find_incident();
 		//Time 30 minutes prior to last update
@@ -192,6 +164,7 @@ class State extends Model
 		if($this->updated_at->lt($mins) && !$incident && $this->resolved)
 		{
 			//DELETE IT!
+			print "Deleting Stale Entry: " . $this->name . "\n";
 			$this->delete();
 		}
 	}
@@ -199,19 +172,24 @@ class State extends Model
 	public function process()
 	{
 		print "Processing State " . $this->name . "!!\n";
-		$incident = $this->process_state_incident();
-		if (!$incident)
+		if($this->incident_id || $this->updated_at  < Carbon::now()->subMinutes(10))
 		{
-			$this->process_stale();
-		} else {
-			if($this->resolved)
+			$incident = $this->process_state_incident();
+			if (!$incident)
 			{
-				$this->comment_ticket("Device " . $this->name . " has RECOVERED.");
+				$this->process_stale();
 			} else {
-				$this->comment_ticket("Device " . $this->name . " has generated an ALERT.");
+				if($this->resolved)
+				{
+					$this->comment_ticket("Device " . $this->name . " has RECOVERED.");
+				} else {
+					$this->comment_ticket("Device " . $this->name . " has generated an ALERT.");
+				}
+				$this->processed = 1;
+				$this->save();
 			}
-			$this->processed = 1;
-			$this->save();
+		} else {
+			print $this->name . " STANDING BY!\n";
 		}
 	}
 	

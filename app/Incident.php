@@ -70,15 +70,15 @@ class Incident extends Model
 		if ($location)
 		{
 
-			$description .= "Display Name: " . $location->u_display_name . "\n";
-			$description .= "Description: " . $location->description . "\n";
-			$description .= "Address: " . $location->street . ", " . $location->city . ", " . $location->state . ", " . $location->zip . "\n";
-			$description .= "Comments: \n" . $location->u_comments . "\n";
+			$description .= "Display Name: " . $location->u_display_name . "\n\n";
+			$description .= "Description: " . $location->description . "\n\n";
+			$description .= "Address: " . $location->street . ", " . $location->city . ", " . $location->state . ", " . $location->zip . "\n\n";
+			$description .= "Comments: \n" . $location->u_comments . "\n\n";
 
 			$contact = $location->getContact();
 			if($contact)
 			{
-				$description .= "Contact: \nName: " . $contact->name . "\nPhone: " . $contact->phone . "\n";			
+				$description .= "Site Contact: \nName: " . $contact->name . "\nPhone: " . $contact->phone . "\n";			
 			}
 		}
 		return $description;
@@ -91,26 +91,26 @@ class Incident extends Model
 		{
 			print "Creating Ticket of type site\n";
 			$ticket = ServiceNowIncident::create([
-				"cmdb_ci"			=>	"195699a16f25d1005d6dcd364b3ee45b",
+				"cmdb_ci"			=>	env('SNOW_cmdb_ci'),
 				"impact"			=>	"2",
 				"urgency"			=>	"1",
-				"short_description"	=>	"Multiple devices down at site " . $this->name,
+				"short_description"	=>	"Multiple devices down at site " . strtoupper($this->name),
 				"description"		=>	$description,
 				"assigned_to"		=>	"",
-				"caller_id"			=>	"480b99d36f2d8a800ef841dc5d3ee4d7",
-				"assignment_group"	=>	"c4b130886f50d1002b018bec5d3ee400",
+				"caller_id"			=>	env('SNOW_caller_id'),
+				"assignment_group"	=>	env('SNOW_assignment_group'),
 			]);
 		} else {
 			print "Creating Ticket of type device\n";
 			$ticket = ServiceNowIncident::create([
-				"cmdb_ci"			=>	"195699a16f25d1005d6dcd364b3ee45b",
+				"cmdb_ci"			=>	env('SNOW_cmdb_ci'),
 				"impact"			=>	"2",
 				"urgency"			=>	"3",
-				"short_description"	=>	"Device " . $this->name . " is down!",
+				"short_description"	=>	"Device " . strtoupper($this->name) . " is down!",
 				"description"		=>	$description,
 				"assigned_to"		=>	"",
-				"caller_id"			=>	"480b99d36f2d8a800ef841dc5d3ee4d7",
-				"assignment_group"	=>	"c4b130886f50d1002b018bec5d3ee400",
+				"caller_id"			=>	env('SNOW_caller_id'),
+				"assignment_group"	=>	env('SNOW_assignment_group'),
 			]);
 		}
 		//print_r($ticket);
@@ -213,11 +213,19 @@ class Incident extends Model
 		if($this->get_unresolved_states()->isEmpty())
 		{
 			//RESOLVE this internal incident.
-			$this->close();
+			if($this->isOpen())
+			{
+				print $this->name . " All states are RESOLVED.  Resolving this incident.\n";
+				$this->close();
+			}
 		//If there are unresolved states left
 		} else {
 			//make sure this incident is open.
-			$this->open();
+			if(!$this->isOpen())
+			{
+				print $this->name . " Incident is resolved, but we found some unresolved STATES.  Reopening incident.\n";
+				$this->open();
+			}
 		}
 	}
 
@@ -226,10 +234,11 @@ class Incident extends Model
 		if(!$this->ticket)
 		{
 			//If this internal incident is OPEN and there is no assigned SNOW ticket
-			if($this->isOpen())
+			if($this->isOpen() || $this->type = "site")
 			{
 				//Create a new snow ticket
-				//$this->create_ticket();
+				print $this->name . " Create SNOW ticket!\n";
+				$this->create_ticket();
 			}
 		} else {
 			//If this incident is RESOLVED <AND> it hasn't been updated in the last 30 minutes
@@ -239,7 +248,9 @@ class Incident extends Model
 				$ticket = $this->get_ticket();
 				if($ticket->isOpen())
 				{
+					print $this->name . " All devices have been recovered COMMENT!\n";
 					$ticket->add_comment("All devices have recovered.  Auto closing ticket!");
+					print "CLOSE TICKET : " . $this->name . "\n";
 					$ticket->close();
 				}
 			}
@@ -253,14 +264,17 @@ class Incident extends Model
 		//If the TICKET is RESOLVED and this internal incident is still open:
 		if($ticket->state == 6 && $this->isOpen())
 		{
+			print $this->name . " COMMENT: Service Now Ticket has been closed prior to all devices recovering.  Marking as resolved in Alerter system.\n"; 
 			$ticket->add_comment("Service Now Ticket has been closed prior to all devices recovering.  Marking as resolved in Alerter system.");
 			//Delete all states that are linked to this incident
 			$states = $this->get_states();
 			foreach($states as $state)
 			{
+				print "Delete STATE " . $state->name . "\n";
 				$state->delete();
 			}
 			//resolve this incident
+			print $this->name . ": Resolved this incident as the SNOW ticket was closed manually.\n";
 			$this->close();
 		}
 		//if the service now ticket is CLOSED (not resolved, but completely closed)
