@@ -18,7 +18,7 @@ class processAlerts extends Command
      *
      * @var string
      */
-    protected $signature = 'alerter:process-alerts';
+    protected $signature = 'netaas:process-alerts';
 
     /**
      * The console command description.
