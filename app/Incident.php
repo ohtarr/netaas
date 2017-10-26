@@ -242,7 +242,7 @@ class Incident extends Model
 			}
 		} else {
 			//If this incident is RESOLVED <AND> it hasn't been updated in the last 30 minutes
-			if(!$this->isOpen() && $this->updated_at < Carbon::now()->subMinutes(30))
+			if(!$this->isOpen() && $this->updated_at < Carbon::now()->subMinutes(env('TIMER_AUTO_RESOLVE_TICKET')))
 			{
 				//Comment on the ticket and mark it RESOLVED
 				$ticket = $this->get_ticket();
@@ -264,8 +264,8 @@ class Incident extends Model
 		//If the TICKET is RESOLVED and this internal incident is still open:
 		if($ticket->state == 6 && $this->isOpen())
 		{
-			print $this->name . " COMMENT: Service Now Ticket has been closed prior to all devices recovering.  Marking as resolved in Alerter system.\n"; 
-			$ticket->add_comment("Service Now Ticket has been closed prior to all devices recovering.  Marking as resolved in Alerter system.");
+			print $this->name . " COMMENT: Service Now Ticket has been closed prior to all devices recovering.  Marking as resolved in Netaas system.\n"; 
+			$ticket->add_comment("Service Now Ticket has been closed prior to all devices recovering.  Marking as resolved in Netaas system.");
 			//Delete all states that are linked to this incident
 			$states = $this->get_states();
 			foreach($states as $state)
@@ -280,7 +280,7 @@ class Incident extends Model
 		//if the service now ticket is CLOSED (not resolved, but completely closed)
 		if($ticket->state == 7)
 		{
-			$ticket->add_comment("Service Now Ticket has been closed prior to all devices recovering.  Clearing " . $this->name . " from Alerter system.");
+			$ticket->add_comment("Service Now Ticket has been closed prior to all devices recovering.  Clearing " . $this->name . " from Netaas system.");
 			//Delete all states associated to this internal incident
 			$states = $this->get_states();
 			foreach($states as $state)

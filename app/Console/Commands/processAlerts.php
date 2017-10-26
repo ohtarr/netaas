@@ -46,8 +46,8 @@ class processAlerts extends Command
     {
 		//$this->clear_states();
 		//$this->clear_tickets();
-		$this->process_incidents();
 		$this->process_events();
+		$this->process_incidents();
 		$this->process_states();
     }
 	
@@ -123,7 +123,7 @@ class processAlerts extends Command
 			}
 		}
 	}
-	
+/*	
 	public function process_tickets()
 	{
 		print "Processing TICKETS...\n";
@@ -153,7 +153,7 @@ class processAlerts extends Command
 			}
 		}
 	}
-
+/**/
 	public function clear_states()
 	{
 		$states = State::all();

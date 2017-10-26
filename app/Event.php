@@ -26,6 +26,23 @@ class Event extends Model
 			'processed'	=>	0,
 		]);
 	}
+	
+	public function comment_ticket($comment)
+	{
+		if($state = $this->get_state())
+		{
+			//print_r($state);
+			if($incident = $state->find_incident())
+			{
+				//print_r($incident);
+				if($ticket = $incident->get_ticket())
+				{
+					//print_r($ticket);
+					$ticket->add_comment($comment);
+				}
+			}
+		}
+	}
 
 	public function process()
 	{
@@ -36,6 +53,12 @@ class Event extends Model
 			$state->resolved = $this->resolved;
 			$state->processed = 0;
 			$state->save();
+			if($this->resolved)
+			{
+				$this->comment_ticket("Device " . $this->name . " has RECOVERED.");
+			} else {
+				$this->comment_ticket("Device " . $this->name . " has generated an ALERT.");
+			}
 		} else {
 			$state = $this->create_state();
 		}

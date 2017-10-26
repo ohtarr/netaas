@@ -137,6 +137,7 @@ class State extends Model
 		return $newinc;
 	}
 
+/*
 	//Function to update a TICKET with comment.
 	public function comment_ticket($comment)
 	{
@@ -151,6 +152,7 @@ class State extends Model
 			}
 		}
 	}
+/**/
 
 	//Check if this is a stale state that is no longer needed.  DELETE if stale.
 	public function process_stale()
@@ -159,7 +161,7 @@ class State extends Model
 		//Check for existing incident
 		$incident = $this->find_incident();
 		//Time 30 minutes prior to last update
-		$mins = Carbon::now()->subMinutes(30);
+		$mins = Carbon::now()->subMinutes(env('TIMER_DELETE_STALE_STATES'));
 		//If it hasn't been updated in 30 mintes, there is no incident, and it is marked RESOLVED
 		if($this->updated_at->lt($mins) && !$incident && $this->resolved)
 		{
@@ -172,19 +174,13 @@ class State extends Model
 	public function process()
 	{
 		print "Processing State " . $this->name . "!!\n";
-		if($this->incident_id || $this->updated_at  < Carbon::now()->subMinutes(10))
+		if($this->incident_id || $this->updated_at  < Carbon::now()->subMinutes(env('TIMER_STATE_SAMPLING_DELAY')))
 		{
 			$incident = $this->process_state_incident();
 			if (!$incident)
 			{
 				$this->process_stale();
 			} else {
-				if($this->resolved)
-				{
-					$this->comment_ticket("Device " . $this->name . " has RECOVERED.");
-				} else {
-					$this->comment_ticket("Device " . $this->name . " has generated an ALERT.");
-				}
 				$this->processed = 1;
 				$this->save();
 			}

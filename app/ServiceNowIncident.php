@@ -132,4 +132,24 @@ class ServiceNowIncident extends Model
 	}
 /**/	
 
+	public function cancel_unused_tickets()
+	{
+		$tickets = $this->all_mine();
+		foreach($tickets as $ticket)
+		{
+			unset($incident);
+			$incident = Incident::where("ticket",$ticket->sys_id)->first();
+			if($incident)
+			{
+				$ticket->caller_id = '45895b236f7d07845d6dcd364b3ee438';
+				$ticket->save();
+			} else {
+				$ticket->add_comment('This ticket is orphaned from the Netaas system.  Closing.');
+				$ticket->state = 6;
+				$ticket->caller_id = '5c004d166fe5110034cb07321c3ee442';
+				$ticket->save();
+			}
+		}
+	}
+
 }
