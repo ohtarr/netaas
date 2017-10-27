@@ -69,8 +69,10 @@ class ServiceNowIncident extends Model
 		return $instance->save();
 	}
 	
-	public function close()
+	public function close($msg)
 	{
+		$this->u_cause_code = "Environment";
+		$this->close_notes = $msg;
 		$this->state = 6;
 		$this->save();
 	}

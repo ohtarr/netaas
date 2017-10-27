@@ -109,11 +109,13 @@ class State extends Model
 				$incident = $this->create_incident($this->get_sitecode(), 'site');
 				foreach($sitestates as $sitestate)
 				{
+					print "SITE!\n";
 					$sitestate->incident_id = $incident->id;
 					$sitestate->save();
 				}
 			//If there is only 1 device and it is NOT resolved
 			} elseif (!$this->resolved) {
+				print "DEVICE!\n";
 				//Create a device incident for single device.
 				$incident = $this->create_incident($this->name, 'device');
 				$this->incident_id = $incident->id;

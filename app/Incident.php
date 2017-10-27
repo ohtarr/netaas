@@ -19,7 +19,7 @@ class Incident extends Model
 	public function close()
 	{
 		$this->resolved = 1;
-		$this->save();
+		$this->save(); 
 	}
 
 	//open this incident
@@ -60,16 +60,27 @@ class Incident extends Model
 
 	public function create_ticket_description()
 	{
-		$description = "The following devices are in an ALERT state at site " . strtoupper($this->name) . ": \n";
-		foreach($this->get_states() as $state)
+		$description = "";
+		if($this->type == "site")
 		{
-			$description .= $state->name . "\n";
+			$description .= "The following devices are in an ALERT state at site " . strtoupper($this->name) . ": \n";
+			foreach($this->get_states() as $state)
+			{
+				$description .= $state->name . "\n";
+			}
 		}
+		if($this->type == "device")
+		{
+			$description .= "The following device is in an ALERT state : \n";
+			$description .= strtoupper($this->name) . "\n";
+		}
+
 		$description .= "\n";
 		$location = $this->get_location();
 		if ($location)
 		{
-
+			$description .= "*****************************************************\n";
+			$description .= "SITE NAME: " . $location->name . "\n\n";
 			$description .= "Display Name: " . $location->u_display_name . "\n\n";
 			$description .= "Description: " . $location->description . "\n\n";
 			$description .= "Address: " . $location->street . ", " . $location->city . ", " . $location->state . ", " . $location->zip . "\n\n";
@@ -78,9 +89,22 @@ class Incident extends Model
 			$contact = $location->getContact();
 			if($contact)
 			{
+				$description .= "*****************************************************\n";
 				$description .= "Site Contact: \nName: " . $contact->name . "\nPhone: " . $contact->phone . "\n";			
 			}
+			$description .= "*****************************************************\n";
+			if($location->u_priority == 0)
+			{
+				$description .= "Site Priority: NO MONITORING!\n";
+			} elseif ($location->u_priority == 1) {
+				$description .= "Site Priority: NEXT BUSINESS DAY\n";
+			} elseif ($location->u_priority == 2) {
+				$description .= "Site Priority: 24/7\n";
+			}
+		} else {
+			$description .= 'Location "' . strtoupper(substr($this->name,0,8)) . '" not found!';
 		}
+		$description .= "*****************************************************\n";
 		return $description;
 	}
 
@@ -248,10 +272,11 @@ class Incident extends Model
 				$ticket = $this->get_ticket();
 				if($ticket->isOpen())
 				{
-					print $this->name . " All devices have been recovered COMMENT!\n";
-					$ticket->add_comment("All devices have recovered.  Auto closing ticket!");
+					$msg = "All devices have recovered.  Auto Closing Ticket!";
+					print $this->name . " " . $msg . "\n";
+					$ticket->add_comment($msg);
 					print "CLOSE TICKET : " . $this->name . "\n";
-					$ticket->close();
+					$ticket->close($msg);
 				}
 			}
 		}
