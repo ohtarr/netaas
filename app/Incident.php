@@ -116,8 +116,8 @@ class Incident extends Model
 			print "Creating Ticket of type site\n";
 			$ticket = ServiceNowIncident::create([
 				"cmdb_ci"			=>	env('SNOW_cmdb_ci'),
-				"impact"			=>	"2",
-				"urgency"			=>	"1",
+				"impact"			=>	env('SNOW_SITE_IMPACT'),
+				"urgency"			=>	env('SNOW_SITE_URGENCY'),
 				"short_description"	=>	"Multiple devices down at site " . strtoupper($this->name),
 				"description"		=>	$description,
 				"assigned_to"		=>	"",
@@ -128,8 +128,8 @@ class Incident extends Model
 			print "Creating Ticket of type device\n";
 			$ticket = ServiceNowIncident::create([
 				"cmdb_ci"			=>	env('SNOW_cmdb_ci'),
-				"impact"			=>	"2",
-				"urgency"			=>	"3",
+				"impact"			=>	env('SNOW_DEVICE_IMPACT'),
+				"urgency"			=>	env('SNOW_DEVICE_URGENCY'),
 				"short_description"	=>	"Device " . strtoupper($this->name) . " is down!",
 				"description"		=>	$description,
 				"assigned_to"		=>	"",
