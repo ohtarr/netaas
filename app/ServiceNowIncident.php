@@ -104,52 +104,42 @@ class ServiceNowIncident extends Model
 			return true;
 		}
 	}
-	
-	/*
-	public function get_states()
-	{
-		$incident = $this->get_incident();
-		return $incident->get_states();
-	}
-	
-	public function update_incident_status()
-	{
-		$incident = $this->get_incident();
-		$states = $this->get_states();
-		if(!$this->isOpen() && $incident->resolved == 0)
-		{
-			foreach($states as $state)
-			{
-				$state->delete();
-			}
-			$incident->resolved = 1;
-			$incident->save();
-		}
-		//return $incident;
-	}
-
-	public function process()
-	{
-		//$this->update_incident_status();
-	}
-/**/	
 
 	public function cancel_unused_tickets()
 	{
 		$tickets = $this->all_mine();
 		foreach($tickets as $ticket)
 		{
-			unset($incident);
+			print $ticket->number . "\n";
 			$incident = Incident::where("ticket",$ticket->sys_id)->first();
+
 			if($incident)
 			{
+				print $incident->name . "\n";
 				$ticket->caller_id = '45895b236f7d07845d6dcd364b3ee438';
 				$ticket->save();
 			} else {
 				$ticket->add_comment('This ticket is orphaned from the Netaas system.  Closing.');
-				$ticket->state = 6;
+				$ticket->state = 4;
 				$ticket->caller_id = '5c004d166fe5110034cb07321c3ee442';
 				$ticket->save();
+			}
+		}
+	}
+	
+	public function cancel_all_my_incidents()
+	{
+		$tickets = $this->all_mine();
+		foreach($tickets as $ticket)
+		{
+			if($ticket->active == 1)
+			{
+				print $ticket->number . "\n";
+				$ticket->state = 4;
+				if($ticket->isDirty())
+				{
+					$ticket->save();
+				}
 			}
 		}
 	}

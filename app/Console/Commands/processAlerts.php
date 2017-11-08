@@ -47,8 +47,8 @@ class processAlerts extends Command
 		//$this->clear_states();
 		//$this->clear_tickets();
 		$this->process_events();
-		$this->process_incidents();
 		$this->process_states();
+		$this->process_incidents();
     }
 	
 	public function test_mail()
@@ -123,37 +123,7 @@ class processAlerts extends Command
 			}
 		}
 	}
-/*	
-	public function process_tickets()
-	{
-		print "Processing TICKETS...\n";
-		//$incidents = Incident::all();
-		$incidents = Incident::whereNotNull("ticket")->get();
 
-		// GET all tickets
-		//$tickets = Ticket::all();
-		
-		// Loop through each ticket and do something?
-		if($incidents->isEmpty())
-		{
-			print "No TICKETS to process!\n";
-		} else {
-			print $incidents->count() . " TICKETS to process!\n";
-			foreach($incidents as $incident) {
-				try {
-					//$ticket = Ticket::where('sysid', $incident->ticket)->withTrashed()->first();
-					$ticket = $incident->get_ticket();
-					if($ticket)
-					{
-						$ticket->process();
-					}
-				} catch (\Exception $e) {
-					//$this->log('Exception crap happened: '.$e->getMessage());
-				}
-			}
-		}
-	}
-/**/
 	public function clear_states()
 	{
 		$states = State::all();
@@ -173,5 +143,4 @@ class processAlerts extends Command
 			$ticket->close();
 		}
 	}
-
 }

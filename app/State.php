@@ -28,6 +28,11 @@ class State extends Model
 	{
 		return State::where('name', 'like', '%' . $this->get_sitecode() . '%')->where('type','device')->whereNull("incident_id")->get();
 	}
+	
+	public function get_site_states()
+	{
+		return State::where('name', 'like', '%' . $this->get_sitecode() . '%')->where('type','device')->get();	
+	}
 
 	public function find_device_incident()
 	{
@@ -98,7 +103,7 @@ class State extends Model
 		//Find any existing incidents.
 		$incident = $this->find_incident();
 		//Find any other states with same site code.
-		$sitestates = $this->get_unassigned_site_states();
+		$sitestates = $this->get_site_states();
 		//If no incident is found
 		if (!$incident)
 		{
@@ -190,5 +195,4 @@ class State extends Model
 			print $this->name . " STANDING BY!\n";
 		}
 	}
-	
 }

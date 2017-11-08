@@ -31,7 +31,7 @@ class Incident extends Model
 	
 	public function isOpen()
 	{
-		if ($this->resolved == 1)
+		if ($this->resolved == 1 || $this->trashed())
 		{
 			return false;
 		} else {
@@ -148,12 +148,21 @@ class Incident extends Model
 	{
 		return State::where('incident_id', $this->id)->get();
 	}
-	/*
-	public function get_resolved_states()
+	
+	public function get_latest_state()
 	{
-		return State::where('incident_id', $this->id)->where("resolved",1)->get();
+		$states = $this->get_states();
+		$neweststate = $states->first();
+		foreach($states as $state)
+		{
+			if($state->updated_at->gt($neweststate->updated_at))
+			{
+				$neweststate = $state;
+			}
+		}
+		return $neweststate;
 	}
-	/**/
+	
 	public function get_unresolved_states()
 	{
 		return State::where('incident_id', $this->id)->where("resolved",0)->get();
@@ -163,169 +172,125 @@ class Incident extends Model
 	{
 		if ($this->ticket)
 		{
-			return ServiceNowIncident::where("sys_id","=",$this->ticket)->first();
+			if($ticket = ServiceNowIncident::where("sys_id","=",$this->ticket)->first())
+			{
+				return $ticket;
+			}
 		}
 		return null;
-		
 	}
-	/*
-	public function update_ticket_status()
+
+	public function checkTickets()
 	{
+		//Fetch me our ticket
 		$ticket = $this->get_ticket();
+		$states = $this->get_states();
+		$unstates = $this->get_unresolved_states();
+		
 		if($ticket)
 		{
-			if($this->get_unresolved_states()->isEmpty())
+			//if the service now ticket is CLOSED (not resolved, but completely closed or cancelled)
+			if($ticket->state == 7 || $ticket->state == 4)
 			{
-			
-			}
-
-
-			//If incident is open but snow ticket is closed
-			if($this->isOpen() && !$ticket->isOpen())
-			{
-				//If incident hasn't been updated in last 30 minutes
-				if ($this->updated_at < $this->updated_at->subMinutes(30))
+				//$ticket->add_comment("Service Now Ticket has been closed prior to all devices recovering.  Clearing " . $this->name . " from Netaas system.");
+				//Delete all states associated to this internal incident
+				foreach($states as $state)
 				{
-					$ticket->add_comment("");
-					$ticket->open();
+					$state->delete();
 				}
-			}
-
-			if(!$this->isOpen() && $ticket->isOpen())
-			{
-				//If all incident states are resolved, mark this incident resolved.
-				if($states->count() == $states->where('resolved', 1)->count())
+				//DELETE this internal incident from database.
+				$this->delete();
+			//If the SNOW ticket is in RESOLVED state
+			} elseif ($ticket->state == 6) {
+				//IF INCIDENT IS NOT RESOLVED
+				if($this->isOpen())
 				{
-					$ticket->add_comment("All devices have been restored!");
+					if($unstates->isEmpty())
+					{
+						//ALL STATES ARE RESOLVED AND TICKET WAS MANUALLY CLOSED
+						$msg = "Manual ticket closure was detected, but all states are resolved anyways.  Clearing " . $this->name . " from Netaas system.\n";
+					} else {
+						//ALL STATES ARE NOT RESOLVED AND TICKET WAS MANUALLY CLOSED
+						$msg = "Manual ticket closure was detected, but all states were NOT resolved.  Clearing " . $this->name . " from Netaas system.\n";
+					}
+					$msg .= "The following STATES have been removed from the Netaas system: \n";
+
+					//DELETE ALL STATES for this incident
+					foreach($states as $state)
+					{
+						$msg .= $state->name . "\n";
+						$state->delete();
+					}
+					//ADD COMMENT TO TICKET
+					$ticket->add_comment($msg);
+					//Set incident to RESOLVED
 					$this->close();
+				//IF INCIDENT IS RESOLVED
+				} else {
+					//If there are unresolved states
+					if($unstates->isNotEmpty())
+					{
+						//COMMENT SNOW TICKET
+						$msg = "The following devices have entered an alert state: \n";
+						//REOPEN INCIDENT AND SNOW TICKET
+						foreach($unstates as $unstate)
+						{
+							$msg .= $unstate->name . "\n";
+						}
+						$msg .= "\nReopening the ticket!";
+						$ticket->add_comment($msg);
+						$this->open();
+						$ticket->open();
+					}
 				}
-				$ticket->close();
+			//If the SNOW ticket is OPEN
+			} else {
+				//IF INCIDENT IS OPEN
+				if($this->isOpen())
+				{
+					if($unstates->isEmpty())
+					{
+						if($this->get_latest_state()->updated_at->lt(Carbon::now()->subMinutes(env('TIMER_AUTO_RESOLVE_TICKET'))))
+						{
+							$msg = "All devices have recovered.  Auto Closing Ticket!";
+							print $this->name . " " . $msg . "\n";
+							$ticket->add_comment($msg);
+							print "CLOSE TICKET : " . $this->name . "\n";
+							$ticket->close($msg);
+							$this->close();
+						}
+					}
+				//IF INCIDENT IS CLOSED
+				} else {
+					if($unstates->isEmpty())
+					{
+						$msg = "Ticket was manually re-opened.  Currently there are NO devices in an ALERT state.";
+					} else {
+						$msg = "Ticket was manually re-opened.  The following devices are currently in an ALERT state: \n";
+						foreach($unstates as $unstate)
+						{
+							$msg .= $unstate->name . "\n";
+						}
+					}
+					$ticket->add_comment($msg);
+					$this->open();
+				}
 			}
+		//IF THERE IS NO SNOW TICKET
 		} else {
-			$ticket = $this->create_ticket();
-		}
-		return $ticket;
-	}
-	/**/
-	/*
-	//Find an active ticket in Service Now and update our internal incident if needed.
-	public function update_incident_status()
-	{
-		//Get TICKET
-		$ticket = $this->get_ticket();
-		//get all STATES for this incident
-		$states = $this->get_states();
-		//If ticket is resolved and incident is not,
-		if(!$ticket->isOpen() && $this->isOpen())
-		{
-			$ticket->add_comment("All devices states have not cleared.  Closing due to Service-Now incident being closed anyways.");
-			//Go through each state
-			foreach($states as $state)
-			{
-				//Delete the state.
-				$state->delete();
-			}
-			//set the incident to resolved and save.
-			$this->close();
-		}
-		return $incident;
-	}
-	/**/
-	public function checkStates()
-	{
-		//If there are NO unresolved states left
-		if($this->get_unresolved_states()->isEmpty())
-		{
-			//RESOLVE this internal incident.
-			if($this->isOpen())
-			{
-				print $this->name . " All states are RESOLVED.  Resolving this incident.\n";
-				$this->close();
-			}
-		//If there are unresolved states left
-		} else {
-			//make sure this incident is open.
-			if(!$this->isOpen())
-			{
-				print $this->name . " Incident is resolved, but we found some unresolved STATES.  Reopening incident.\n";
-				$this->open();
-			}
-		}
-	}
-
-	public function checkIncidents()
-	{
-		if(!$this->ticket)
-		{
-			//If this internal incident is OPEN and there is no assigned SNOW ticket
-			if($this->isOpen() || $this->type = "site")
+			//IF TYPE IS SITE OR THERE ARE UNRESOLVED STATES
+			if($this->type == "site" || $unstates->isNotEmpty())
 			{
 				//Create a new snow ticket
 				print $this->name . " Create SNOW ticket!\n";
 				$this->create_ticket();
 			}
-		} else {
-			//If this incident is RESOLVED <AND> it hasn't been updated in the last 30 minutes
-			if(!$this->isOpen() && $this->updated_at < Carbon::now()->subMinutes(env('TIMER_AUTO_RESOLVE_TICKET')))
-			{
-				//Comment on the ticket and mark it RESOLVED
-				$ticket = $this->get_ticket();
-				if($ticket->isOpen())
-				{
-					$msg = "All devices have recovered.  Auto Closing Ticket!";
-					print $this->name . " " . $msg . "\n";
-					$ticket->add_comment($msg);
-					print "CLOSE TICKET : " . $this->name . "\n";
-					$ticket->close($msg);
-				}
-			}
-		}
-	}
-	
-	public function checkTickets()
-	{
-		//Fetch me our ticket
-		$ticket = $this->get_ticket();
-		//If the TICKET is RESOLVED and this internal incident is still open:
-		if($ticket->state == 6 && $this->isOpen())
-		{
-			print $this->name . " COMMENT: Service Now Ticket has been closed prior to all devices recovering.  Marking as resolved in Netaas system.\n"; 
-			$ticket->add_comment("Service Now Ticket has been closed prior to all devices recovering.  Marking as resolved in Netaas system.");
-			//Delete all states that are linked to this incident
-			$states = $this->get_states();
-			foreach($states as $state)
-			{
-				print "Delete STATE " . $state->name . "\n";
-				$state->delete();
-			}
-			//resolve this incident
-			print $this->name . ": Resolved this incident as the SNOW ticket was closed manually.\n";
-			$this->close();
-		}
-		//if the service now ticket is CLOSED (not resolved, but completely closed)
-		if($ticket->state == 7)
-		{
-			$ticket->add_comment("Service Now Ticket has been closed prior to all devices recovering.  Clearing " . $this->name . " from Netaas system.");
-			//Delete all states associated to this internal incident
-			$states = $this->get_states();
-			foreach($states as $state)
-			{
-				$state->delete();
-			}
-			//DELETE this internal incident from database.
-			$this->delete();
 		}
 	}
 
 	public function process()
 	{
 		print "Processing Incident " . $this->name . "!!\n";
-		$this->checkStates();
-		$this->checkIncidents();
 		$this->checkTickets();
-			//$this->update_incident_status();
-			//$this->update_ticket_status();
-			//$this->create_ticket();
 	}
-
 }
