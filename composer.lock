@@ -4,8 +4,8 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "e5b6c2ffd7365d30d8fbb4b5d5637db3",
-    "content-hash": "039d1c219751700050809895c6a26cde",
+    "hash": "fa59ef525c07b147c7629103a95e6997",
+    "content-hash": "d24ec68b05fefe59396aa200583a76f3",
     "packages": [
         {
             "name": "dnoegel/php-xdg-base-dir",
@@ -316,6 +316,39 @@
                 "trusted proxy"
             ],
             "time": "2017-06-15 17:19:42"
+        },
+        {
+            "name": "geerlingguy/ping",
+            "version": "1.1.2",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/geerlingguy/Ping.git",
+                "reference": "b16248c0a59a6555437744db8b78c0589cfc32f9"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/geerlingguy/Ping/zipball/b16248c0a59a6555437744db8b78c0589cfc32f9",
+                "reference": "b16248c0a59a6555437744db8b78c0589cfc32f9",
+                "shasum": ""
+            },
+            "type": "library",
+            "autoload": {
+                "classmap": [
+                    "JJG/Ping.php"
+                ]
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Jeff Geerling",
+                    "email": "jeff@jeffgeerling.com"
+                }
+            ],
+            "description": "A PHP class to ping hosts.",
+            "time": "2017-02-02 15:38:40"
         },
         {
             "name": "guzzlehttp/guzzle",

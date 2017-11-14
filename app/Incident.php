@@ -101,6 +101,20 @@ class Incident extends Model
 			} elseif ($location->u_priority == 2) {
 				$description .= "Site Priority: 24/7\n";
 			}
+			$opengear = $location->getOpengear();
+			$description .= "*****************************************************\n";
+			if($opengear)
+			{
+				$description .= "Opengear " . strtoupper($location->name) . "OOB01 status: " . $opengear . "\n";
+			} else {
+				$description .= "Opengear " . strtoupper($location->name) . "OOB01 does NOT exist!\n";
+			}
+			$weatherdesc = $location->getWeather();
+			if($weatherdesc)
+			{
+			$description .= "*****************************************************\n";
+			$description .= "Weather Information : " . $weatherdesc . "\n";
+			}
 		} else {
 			$description .= 'Location "' . strtoupper(substr($this->name,0,8)) . '" not found!';
 		}

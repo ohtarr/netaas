@@ -84,7 +84,8 @@ class processAlerts extends Command
 	{
 		print "\nProcessing STATES...\n";
 		// GET the state of DEVICES detected by event information
-		$states = State::where('type','device')->where('processed',0)->get();
+		//$states = State::where('type','device')->where('processed',0)->get();
+		$states = State::where('type','device')->get();
 		//$states = State::where('incident_id', null)->where('type','device')->where('created_at','<', $tenminsago)->get();
 		if($states->isEmpty()) {
             //throw new \Exception('ERROR: I didnt get any states from the database whatever that is');
@@ -95,7 +96,8 @@ class processAlerts extends Command
 			foreach($states as $state) {
 				try {
 					//$this->process_state($state);
-					$state->process();
+					$state = $state->fresh();
+					$state->process2();
 				} catch (\Exception $e) {
 					//$this->log('Exception crap happened: '.$e->getMessage());
 				}

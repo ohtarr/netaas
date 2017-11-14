@@ -3,8 +3,9 @@
 namespace App;
 
 use Illuminate\Database\Eloquent\Model;
-use GuzzleHttp\Client as GuzzleHttpClient;
 use App\ServiceNowUser as ServiceNowUser;
+use GuzzleHttp\Client as GuzzleHttpClient;
+use JJG\Ping as Ping;
 
 class ServiceNowLocation extends Model
 {
@@ -58,4 +59,38 @@ class ServiceNowLocation extends Model
 		}
 		return null;
 	}
+	
+	public function getWeather()
+	{
+		$client = new GuzzleHttpClient;
+		$verb = 'GET';
+		$url = env('WEATHER_API_BASE_URL') . "?lat=" . $this->latitude . "&lon=" . $this->longitude . "&appid=" . env('WEATHER_API_KEY') . "&units=imperial";
+		//Perform the api call
+		$response = $client->request($verb, $url);
+		//get the body contents and decode json into an array.
+		$array = json_decode($response->getBody()->getContents(), true);
+		//print_r($array);
+		$weatherdesc = $array['weather'][0]['main'] . ", " . $array['weather'][0]['description'] . ", Temp: " . $array['main']['temp'] . "F , Windspeed: " . $array['wind']['speed'] . "MPH";
+		return $weatherdesc;
+	}
+
+	public function getOpengear()
+	{
+		$host = $this->name . "oob01";
+		$ip = gethostbyname($host);
+		if (filter_var($ip, FILTER_VALIDATE_IP)) {
+			$ping = new Ping($host);
+			$ping->setTimeout(5);		
+			$status = $ping->ping();
+			if($status)
+			{
+				return "UP!";
+			} else {
+				return "DOWN!";
+			}
+		} else {
+			return null;
+		}
+	}
+	
 }
