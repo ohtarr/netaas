@@ -44,18 +44,19 @@ class processAlerts extends Command
      */
     public function handle()
     {
-		//$this->clear_states();
-		//$this->clear_tickets();
-		$this->process_events();
-		$this->process_states();
-		$this->process_incidents();
+		//$this->process_events();
+		//$this->process_states();
+		//$this->process_incidents();
+		$this->processEvents();
+		$this->processStates();
+		$this->processIncidents();
     }
 	
 	public function test_mail()
 	{
 		Mail::to("andrew.jones@kiewit.com")->send(new TestMail());
 	}
-
+/*
 	public function process_events()
 	{
 		print "\nProcessing EVENTS...\n";
@@ -79,7 +80,8 @@ class processAlerts extends Command
 			}
 		}
 	}
-	
+/**/
+/*
 	public function process_states()
 	{
 		print "\nProcessing STATES...\n";
@@ -104,7 +106,8 @@ class processAlerts extends Command
 			}
 		}
     }
-
+/**/
+/*
 	public function process_incidents()
 	{
 		print "\nProcessing INCIDENTS...\n";
@@ -125,7 +128,8 @@ class processAlerts extends Command
 			}
 		}
 	}
-
+/**/
+/*
 	public function clear_states()
 	{
 		$states = State::all();
@@ -136,13 +140,77 @@ class processAlerts extends Command
 			$state->save();
 		}
 	}
-	
+/**/
+/*
 	public function clear_tickets()
 	{
-		$tickets = ServiceNowIncident::where("sys_created_by","=","netman.ldapint")->where("state","=", 1)->get();
+		$tickets = ServiceNowIncident::where("sys_created_by","=",env("SNOW_USERNAME"))->where("state","=", 1)->get();
 		foreach($tickets as $ticket)
 		{
 			$ticket->close();
+		}
+	}
+/**/	
+	public function processEvents()
+	{
+		$events = Event::where("processed",0)->get();
+		
+		foreach($events as $event)
+		{
+			$state = $event->get_state();
+			if($state)
+			{
+				$state->resolved = $event->resolved;
+				$state->processed = 0;
+				$state->save();
+			} else {
+				$state = $event->create_state();
+			}
+			if($state)
+			{
+				$event->processed = 1;
+				$event->save();
+			}
+		}
+	}
+	
+	public function processStates()
+	{
+		$states = State::whereNull("incident_id")->get();
+		if($states->isNotEmpty())
+		{
+			foreach($states as $state)
+			{
+				$state = $state->fresh();
+				$incident = $state->find_incident();
+				if($incident)
+				{
+					//Assign incident_id
+					$state->incident_id = $incident->id;
+					$state->save();
+				} else {
+					//Create Incident
+					if($state->updated_at < Carbon::now()->subMinutes(env('TIMER_STATE_SAMPLING_DELAY')) && $state->resolved == 0)
+					{
+
+					} elseif ($state->updated_at < Carbon::now()->subMinutes(env('TIMER_DELETE_STALE_STATES')))
+					{
+						$state->delete();
+					}
+				}
+			}
+		}
+	}
+	
+	public function processIncidents()
+	{
+		$incidents = Incident::all();
+		if($incidents->isNotEmpty())
+		{
+			foreach($incidents as $incident)
+			{
+				$incident->process();
+			}
 		}
 	}
 }

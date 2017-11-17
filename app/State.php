@@ -24,21 +24,27 @@ class State extends Model
 		return $sitecode;
 	}
 	
-	public function get_unassigned_site_states()
-	{
-		return State::where('name', 'like', '%' . $this->get_sitecode() . '%')->where('type','device')->whereNull("incident_id")->get();
-	}
-	
 	public function get_site_states()
 	{
 		return State::where('name', 'like', '%' . $this->get_sitecode() . '%')->where('type','device')->get();	
 	}
 	
+	public function get_unassigned_site_states()
+	{
+		return State::where('name', 'like', '%' . $this->get_sitecode() . '%')->where('type','device')->whereNull("incident_id")->get();
+	}
+	/*
 	public function get_unresolved_site_states()
 	{
 		return State::where('name', 'like', '%' . $this->get_sitecode() . '%')->where('type','device')->where('resolved',0)->get();
 	}
-
+	/**/
+	/*
+	public function get_unprocessed_unassigned_site_states()
+	{
+		return State::where('name', 'like', '%' . $this->get_sitecode() . '%')->where('type','device')->where('processed',0)->whereNull("incident_id")->get();
+	}
+/**/	
 	//Locate an existing incident for this state.
 	public function find_incident()
 	{
@@ -79,17 +85,19 @@ class State extends Model
 			}
 		//If there is only 1 device and it is NOT resolved
 		} else {
-			//Create a device incident for single device.
-			if($incident = $this->create_incident($this->name, 'device'))
-			{
-				$this->incident_id = $incident->id;
-				$this->processed = 1;
-				$this->save();
-			}
+			//if($this->resolved == 0)
+			//{
+				//Create a device incident for single device.
+				if($incident = $this->create_incident($this->name, 'device'))
+				{
+					$this->incident_id = $incident->id;
+					$this->processed = 1;
+					$this->save();
+				}
+			//}
 		}
-		return $incident;
 	}
-	
+/*
 	//check for existing incident and create one of proper type if needed!
 	public function process_state_incident()
 	{
@@ -123,7 +131,7 @@ class State extends Model
 		//Return the incident
 		return $incident;
 	}
-
+/**/
 	//Created an incident in the incident table
 	public function create_incident($name, $type)
 	{
@@ -136,7 +144,6 @@ class State extends Model
 		//Return the new incident.
 		return $newinc;
 	}
-
 /*
 	//Function to update a TICKET with comment.
 	public function comment_ticket($msg)
@@ -153,7 +160,7 @@ class State extends Model
 		}
 	}
 /**/
-
+/*
 	//Check if this is a stale state that is no longer needed.  DELETE if stale.
 	public function process_stale()
 	{
@@ -170,7 +177,8 @@ class State extends Model
 			$this->delete();
 		}
 	}
-
+/**/
+/*
 	public function process()
 	{
 		print "Processing State " . $this->name . "!!\n";
@@ -217,7 +225,8 @@ class State extends Model
 			}
 		}
 	}
-	
+/**/	
+/*
 	public function process2()
 	{
 		if($this->processed == 0)
@@ -248,7 +257,7 @@ class State extends Model
 						$this->save();
 					}
 				} else {
-					$unstates = $this->get_unresolved_site_states();
+					$unstates = $this->get_unprocessed_unassigned_site_states();
 					if($unstates->count() > 0 && $this->updated_at < Carbon::now()->subMinutes(env('TIMER_STATE_SAMPLING_DELAY')))
 					{
 						if($incident = $this->create_new_incident())
@@ -261,7 +270,45 @@ class State extends Model
 						$this->delete();
 					}
 				}
+			} else {
+				
 			}
 		}
 	}
+/**/
+
+/*
+	public function update_ticket()
+	{
+		$msg = "";
+		if($this->incident_id)
+		{
+			$states = State::where("incident_id",$this->incident_id)->get();
+			if($states->isNotEmpty())
+			{
+				$unresolved = $states->where("resolved","0");
+				if($unresolved->isNotEmpty())
+				{
+					$msg .= "The following states are in an ALERT state: \n"; 
+					foreach($unresolved as $un)
+					{
+						$msg .= $un->name . "\n";
+					}
+					$msg .= "\n";
+				}
+				$resolved = $states->where("resolved","1");
+				if($resolved->isNotEmpty())
+				{
+					$msg .= "The following states are in a RECOVERED state: \n"; 
+					foreach($resolved as $re)
+					{
+						$msg .= $re->name . "\n";
+					}
+					$msg .= "\n";
+				}
+				$this->comment_ticket($msg);
+			}
+		}
+	}
+/**/	
 }

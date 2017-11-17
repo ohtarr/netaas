@@ -39,6 +39,18 @@ class Incident extends Model
 		}
 	}
 	
+	public function purge()
+	{
+		$states = $this->get_states();
+		//Delete all states associated to this internal incident
+		foreach($states as $state)
+		{
+			$state->delete();
+		}
+		//DELETE this internal incident from database.
+		$this->delete();
+	}
+	
 	public function get_location()
 	{
 		//grab the first 8 characters of our name.  This is our sitecode!
@@ -177,9 +189,53 @@ class Incident extends Model
 		return $neweststate;
 	}
 	
+	public function updateTicket()
+	{
+		$msg = "";
+		if($ticket = $this->get_ticket())
+		{
+			$ustates = $this->get_unresolved_states();
+			$rstates = $this->get_resolved_states();
+			$msg.= "State update detected.  Current status:\n";
+			$msg .= "The following states are in an ALERT state: \n";
+			if($ustates->isNotEmpty())
+			{
+				foreach($ustates as $ustate)
+				{
+					$msg .= $ustate->name . "\n";
+					$ustate->processed = 1;
+					$ustate->save();
+				}
+			}
+			$msg .= "\nThe following states are in a RECOVERED state: \n";
+			if($rstates->isNotEmpty())
+			{
+				foreach($rstates as $rstate)
+				{
+					$msg .= $rstate->name . "\n";
+					$rstate->processed = 1;
+					$rstate->save();
+				}
+			}
+			$ticket->add_comment($msg);
+			return 1;
+		}
+		return null;
+	}
+	
 	public function get_unresolved_states()
 	{
 		return State::where('incident_id', $this->id)->where("resolved",0)->get();
+	}
+	
+	public function get_resolved_states()
+	{
+		return State::where('incident_id', $this->id)->where("resolved",1)->get();
+	}
+	
+	public function get_unprocessed_states()
+	{
+		return State::where('incident_id', $this->id)->where("processed",0)->get();
 	}
 	
 	public function get_ticket()
@@ -200,20 +256,15 @@ class Incident extends Model
 		$ticket = $this->get_ticket();
 		$states = $this->get_states();
 		$unstates = $this->get_unresolved_states();
+		$unpstates = $this->get_unprocessed_states();
 		
 		if($ticket)
 		{
 			//if the service now ticket is CLOSED (not resolved, but completely closed or cancelled)
 			if($ticket->state == 7 || $ticket->state == 4)
 			{
-				//$ticket->add_comment("Service Now Ticket has been closed prior to all devices recovering.  Clearing " . $this->name . " from Netaas system.");
-				//Delete all states associated to this internal incident
-				foreach($states as $state)
-				{
-					$state->delete();
-				}
-				//DELETE this internal incident from database.
-				$this->delete();
+				//Purge this incident and all related states.
+				$this->purge();
 			//If the SNOW ticket is in RESOLVED state
 			} elseif ($ticket->state == 6) {
 				//IF INCIDENT IS NOT RESOLVED
@@ -250,11 +301,18 @@ class Incident extends Model
 						foreach($unstates as $unstate)
 						{
 							$msg .= $unstate->name . "\n";
+							$unstate->processed = 1;
+							$unstate->save();
 						}
 						$msg .= "\nReopening the ticket!";
 						$ticket->add_comment($msg);
 						$this->open();
-						$ticket->open();
+						$ticket->assigned_to = "";
+						$ticket->state=2;
+						$ticket->save();
+					} elseif($this->updated_at->lt(Carbon::now()->subMinutes(env('TIMER_AUTO_RELEASE_TICKET')))) {
+						$ticket->add_comment("This ticket has been in a resolved state for over " . env('TIMER_AUTO_RELEASE_TICKET') . " hours. This ticket is no longer tracked by the Netaas system.");
+						$this->purge();
 					}
 				}
 			//If the SNOW ticket is OPEN
@@ -262,6 +320,10 @@ class Incident extends Model
 				//IF INCIDENT IS OPEN
 				if($this->isOpen())
 				{
+					if($unpstates->isNotEmpty())
+					{
+						$this->updateTicket();
+					}
 					if($unstates->isEmpty())
 					{
 						if($this->get_latest_state()->updated_at->lt(Carbon::now()->subMinutes(env('TIMER_AUTO_RESOLVE_TICKET'))))
