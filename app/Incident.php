@@ -310,7 +310,7 @@ class Incident extends Model
 						$ticket->assigned_to = "";
 						$ticket->state=2;
 						$ticket->save();
-					} elseif($this->updated_at->lt(Carbon::now()->subMinutes(env('TIMER_AUTO_RELEASE_TICKET')))) {
+					} elseif($this->updated_at->lt(Carbon::now()->subHours(env('TIMER_AUTO_RELEASE_TICKET')))) {
 						$ticket->add_comment("This ticket has been in a resolved state for over " . env('TIMER_AUTO_RELEASE_TICKET') . " hours. This ticket is no longer tracked by the Netaas system.");
 						$this->purge();
 					}
