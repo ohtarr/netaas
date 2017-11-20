@@ -192,7 +192,7 @@ class processAlerts extends Command
 					//Create Incident
 					if($state->updated_at < Carbon::now()->subMinutes(env('TIMER_STATE_SAMPLING_DELAY')) && $state->resolved == 0)
 					{
-
+						$state->create_new_incident();
 					} elseif ($state->updated_at < Carbon::now()->subMinutes(env('TIMER_DELETE_STALE_STATES')))
 					{
 						$state->delete();

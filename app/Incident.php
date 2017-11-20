@@ -308,6 +308,7 @@ class Incident extends Model
 						$ticket->add_comment($msg);
 						$this->open();
 						$ticket->assigned_to = "";
+						
 						$ticket->state=2;
 						$ticket->save();
 					} elseif($this->updated_at->lt(Carbon::now()->subHours(env('TIMER_AUTO_RELEASE_TICKET')))) {
