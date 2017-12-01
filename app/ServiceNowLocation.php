@@ -68,9 +68,16 @@ class ServiceNowLocation extends Model
 		//Perform the api call
 		$response = $client->request($verb, $url);
 		//get the body contents and decode json into an array.
-		$array = json_decode($response->getBody()->getContents(), true);
-		//print_r($array);
-		$weatherdesc = $array['weather'][0]['main'] . ", " . $array['weather'][0]['description'] . ", Temp: " . $array['main']['temp'] . "F , Windspeed: " . $array['wind']['speed'] . "MPH";
+		try
+		{
+			$array = json_decode($response->getBody()->getContents(), true);
+		} catch(\Exception $e) {
+		
+		}
+		if($array)
+		{
+			$weatherdesc = $array['weather'][0]['main'] . ", " . $array['weather'][0]['description'] . ", Temp: " . $array['main']['temp'] . "F , Windspeed: " . $array['wind']['speed'] . "MPH";
+		}
 		return $weatherdesc;
 	}
 

@@ -3,7 +3,7 @@
 namespace App;
 
 use Illuminate\Database\Eloquent\Model;
-use GuzzleHttp\Client as GuzzleHttpClient;
+//use GuzzleHttp\Client as GuzzleHttpClient;
 
 class ServiceNowIncident extends Model
 {
@@ -103,6 +103,33 @@ class ServiceNowIncident extends Model
 		} else {
 			return true;
 		}
+	}
+	
+	public function getPriorityString()
+	{
+		$string = null;
+		if($this->priority == 1)
+		{
+			$string =  "critical";
+		}
+		if($this->priority == 2)
+		{
+			$string = "high";
+		}
+		if($this->priority == 3)
+		{
+			$string = "medium";
+		}
+		if($this->priority == 4)
+		{
+			$string = "low";
+		}
+		return $string;
+	}
+
+	public function numberToVoice()
+	{
+		return implode(" ", str_split($this->number));
 	}
 
 	public function cancel_unused_tickets()

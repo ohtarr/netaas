@@ -9,11 +9,21 @@ use App\State;
 use App\ServiceNowIncident;
 use App\ServiceNowLocation;
 use Carbon\Carbon;
+use GuzzleHttp\Client as GuzzleHttpClient;
 
 class Incident extends Model
 {
 	use SoftDeletes;
 	protected $fillable = ['name','type'];
+
+	protected $dates = [
+        'created_at',
+        'updated_at',
+        'deleted_at',
+		'last_opened',
+		'called_oncall',
+		'called_sup'
+    ];
 
 	//close this incident
 	public function close()
@@ -25,6 +35,7 @@ class Incident extends Model
 	//open this incident
 	public function open()
 	{
+		//$this->last_opened = Carbon::now();
 		$this->resolved = 0;
 		$this->save();
 	}
@@ -51,6 +62,48 @@ class Incident extends Model
 		$this->delete();
 	}
 	
+	public static function isAfterHours()
+	{
+		$start = Carbon::createFromTime(env("TIME_WORKDAY_START"),0,0,env("TIME_ZONE"));
+		$end = Carbon::createFromTime(env("TIME_WORKDAY_END"),0,0,env("TIME_ZONE")); 
+		$now = Carbon::now(env("TIME_ZONE"));
+		if($now->isWeekday())
+		{
+			if($now->between($start, $end))
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+	
+	public function nameToVoice()
+	{
+		return implode(" ", str_split($this->name));	
+	}
+	
+	public function getUrgency()
+	{
+		$location = $this->get_location();
+		if($this->type == "site")
+		{
+			if($location)
+			{
+				if($location->u_priority == 2)
+				{
+					$urgency = 1;			
+				} else {
+					$urgency = 2;
+				}
+			} else {
+				$urgency = 2;
+			}
+		} else {
+			$urgency = 3;
+		}
+		return $urgency;
+	}
+	
 	public function get_location()
 	{
 		//grab the first 8 characters of our name.  This is our sitecode!
@@ -62,12 +115,7 @@ class Incident extends Model
 		} catch(\Exception $e) {
 		
 		}
-		if ($location)
-		{
-			return $location;
-		} else {
-			return null;
-		}
+		return $location;
 	}
 
 	public function create_ticket_description()
@@ -134,42 +182,106 @@ class Incident extends Model
 		return $description;
 	}
 
-	public function create_ticket()
+	public function createNewTicket()
 	{
-		$description = $this->create_ticket_description();
+		$urgency = $this->getUrgency();
 		if($this->type == "site")
 		{
-			print "Creating Ticket of type site\n";
-			$ticket = ServiceNowIncident::create([
-				"cmdb_ci"			=>	env('SNOW_cmdb_ci'),
-				"impact"			=>	env('SNOW_SITE_IMPACT'),
-				"urgency"			=>	env('SNOW_SITE_URGENCY'),
-				"short_description"	=>	"Multiple devices down at site " . strtoupper($this->name),
-				"description"		=>	$description,
-				"assigned_to"		=>	"",
-				"caller_id"			=>	env('SNOW_caller_id'),
-				"assignment_group"	=>	env('SNOW_assignment_group'),
-			]);
-		} else {
-			print "Creating Ticket of type device\n";
-			$ticket = ServiceNowIncident::create([
-				"cmdb_ci"			=>	env('SNOW_cmdb_ci'),
-				"impact"			=>	env('SNOW_DEVICE_IMPACT'),
-				"urgency"			=>	env('SNOW_DEVICE_URGENCY'),
-				"short_description"	=>	"Device " . strtoupper($this->name) . " is down!",
-				"description"		=>	$description,
-				"assigned_to"		=>	"",
-				"caller_id"			=>	env('SNOW_caller_id'),
-				"assignment_group"	=>	env('SNOW_assignment_group'),
-			]);
+			$summary = "Multiple devices down at site " . strtoupper($this->name);
 		}
-		//print_r($ticket);
-		//print $ticket->sysid . "\n";
-		$this->ticket = $ticket->sys_id;
-		$this->save();
+		if($this->type == "device")
+		{
+			$summary = "Device " . strtoupper($this->name) . " is down!";
+		}
+		$ticket = $this->createTicket($urgency, $summary);
 		return $ticket;
 	}
 
+	public function createTicket($urgency, $summary)
+	{
+		$description = $this->create_ticket_description();
+		print "Creating Ticket of type " . $this->type . "\n";
+		$ticket = ServiceNowIncident::create([
+			"cmdb_ci"			=>	env('SNOW_cmdb_ci'),
+			"impact"			=>	2,
+			"urgency"			=>	$urgency,
+			"short_description"	=>	$summary,
+			"description"		=>	$description,
+			"assigned_to"		=>	"",
+			"caller_id"			=>	env('SNOW_caller_id'),
+			"assignment_group"	=>	env('SNOW_assignment_group'),
+		]);
+		if($ticket)
+		{
+			$this->ticket = $ticket->sys_id;
+			$this->last_opened = Carbon::now();
+			$this->save();
+			if($urgency == 1)
+			{
+				if($this->isAfterHours())
+				{
+					$msg = "A High priority incident has been opened." . $ticket->numberToVoice() . ", Multiple devices are down at site " . $this->nameToVoice();
+					$this->callOncall($msg);
+				}
+			}
+			return $ticket;
+		}
+		return null;
+	}
+
+	public function reopenTicket()
+	{
+		$ticket = $this->get_ticket();
+		$unstates = $this->get_unresolved_states();
+		if($ticket)
+		{
+			//COMMENT SNOW TICKET
+			$msg = "The following devices have entered an alert state: \n";
+			//REOPEN INCIDENT AND SNOW TICKET
+			foreach($unstates as $unstate)
+			{
+				$msg .= $unstate->name . "\n";
+				$unstate->processed = 1;
+				$unstate->save();
+			}
+			$msg .= "\nReopening the ticket!";
+			$ticket->add_comment($msg);
+			$this->resolved = 0;
+			$this->last_opened = Carbon::now();
+			$this->called_oncall = null;
+			$this->called_sup = null;
+			$this->save();
+			$ticket->urgency = $this->getUrgency();
+			$ticket->impact = 2;
+			$ticket->assigned_to = "";
+			$ticket->state=2;
+			$ticket->save();
+			$ticketnumber = implode(" ", str_split($ticket->number));
+			$sitename = implode(" ", str_split($this->name));
+			if($this->isAfterHours())
+			{
+				if($ticket->priority == 1 || $ticket->priority == 2)
+				{
+					$msg = "A " . $ticket->getPriorityString() . " priority incident has been reopened.  Ticket Number " . $ticket->numberToVoice() . "," . $ticket->short_description . ", Site Code " . $this->nameToVoice();
+					$this->callOncall($msg);
+				}
+			}
+			return true;
+		}
+		return false;
+	}
+	
+	public function autoCloseTicket()
+	{
+		$ticket = $this->get_ticket();
+		$msg = "All devices have recovered.  Auto Closing Ticket!";
+		print $this->name . " " . $msg . "\n";
+		$ticket->add_comment($msg);
+		print "CLOSE TICKET : " . $this->name . "\n";
+		$ticket->close($msg);
+		$this->close();
+	}
+	
 	public function get_states()
 	{
 		return State::where('incident_id', $this->id)->get();
@@ -197,9 +309,9 @@ class Incident extends Model
 			$ustates = $this->get_unresolved_states();
 			$rstates = $this->get_resolved_states();
 			$msg.= "State update detected.  Current status:\n";
-			$msg .= "The following states are in an ALERT state: \n";
 			if($ustates->isNotEmpty())
 			{
+				$msg .= "The following states are in an ALERT state: \n";
 				foreach($ustates as $ustate)
 				{
 					$msg .= $ustate->name . "\n";
@@ -207,9 +319,9 @@ class Incident extends Model
 					$ustate->save();
 				}
 			}
-			$msg .= "\nThe following states are in a RECOVERED state: \n";
 			if($rstates->isNotEmpty())
 			{
+				$msg .= "\nThe following states are in a RECOVERED state: \n";
 				foreach($rstates as $rstate)
 				{
 					$msg .= $rstate->name . "\n";
@@ -221,6 +333,50 @@ class Incident extends Model
 			return 1;
 		}
 		return null;
+	}
+
+	public function callOncall($msg)
+	{
+		$this->callVoice(env("TROPO_ONCALL_NUMBER"),$msg);
+		$this->save();
+	}
+
+	public function escalateOncall($msg)
+	{
+		$this->callVoice(env("TROPO_ONCALL_NUMBER"),$msg);
+		$this->called_oncall = Carbon::now();
+		$this->save();
+	}
+
+	public function escalateSup($msg)
+	{
+		$this->callVoice(env("TROPO_ONCALL_NUMBER"),$msg);
+		$this->called_sup = Carbon::now();
+		$this->save();
+	}
+
+	public function callVoice($number, $msg)
+	{
+		$paramsarray = [
+			"token"		=>	env("TROPO_TOKEN"),
+			"from"		=>	env("TROPO_CALLERID"),
+			"msg"		=>	$msg,
+			"number"	=>	$number,
+		];
+		$params['body'] = json_encode($paramsarray);
+		$params['headers'] = [
+			'Content-Type'	=> 'application/json',
+			'Accept'		=> 'application/json',
+		];
+		$client = new GuzzleHttpClient;
+		try
+		{
+			$response = $client->request("POST", env("TROPO_BASE_URL"), $params);
+		} catch(\Exception $e) {
+		
+		}
+		//get the body contents and decode json into an array.
+		$array = json_decode($response->getBody()->getContents(), true);
 	}
 	
 	public function get_unresolved_states()
@@ -292,25 +448,10 @@ class Incident extends Model
 					$this->close();
 				//IF INCIDENT IS RESOLVED
 				} else {
-					//If there are unresolved states
+					//If there are unresolved states, reopen ticket
 					if($unstates->isNotEmpty())
 					{
-						//COMMENT SNOW TICKET
-						$msg = "The following devices have entered an alert state: \n";
-						//REOPEN INCIDENT AND SNOW TICKET
-						foreach($unstates as $unstate)
-						{
-							$msg .= $unstate->name . "\n";
-							$unstate->processed = 1;
-							$unstate->save();
-						}
-						$msg .= "\nReopening the ticket!";
-						$ticket->add_comment($msg);
-						$this->open();
-						$ticket->assigned_to = "";
-						
-						$ticket->state=2;
-						$ticket->save();
+						$this->reopenTicket();
 					} elseif($this->updated_at->lt(Carbon::now()->subHours(env('TIMER_AUTO_RELEASE_TICKET')))) {
 						$ticket->add_comment("This ticket has been in a resolved state for over " . env('TIMER_AUTO_RELEASE_TICKET') . " hours. This ticket is no longer tracked by the Netaas system.");
 						$this->purge();
@@ -329,12 +470,22 @@ class Incident extends Model
 					{
 						if($this->get_latest_state()->updated_at->lt(Carbon::now()->subMinutes(env('TIMER_AUTO_RESOLVE_TICKET'))))
 						{
-							$msg = "All devices have recovered.  Auto Closing Ticket!";
-							print $this->name . " " . $msg . "\n";
-							$ticket->add_comment($msg);
-							print "CLOSE TICKET : " . $this->name . "\n";
-							$ticket->close($msg);
-							$this->close();
+							$this->autoCloseTicket();
+						}
+					}
+					if($this->isAfterHours())
+					{
+						if($ticket->priority == 1 || $ticket->priority == 2)
+						{
+							if($this->last_opened->lt(Carbon::now()->subMinutes(env("TROPO_UNASSIGNED_SUP_ALERT_DELAY"))) && !$ticket->assigned_to && !$this->called_sup)
+							{
+								$msg = "A " . $ticket->getPriorityString() . " priority incident has been opened for more than " . env("TROPO_UNASSIGNED_SUP_ALERT_DELAY") . " minutes and is currently not assigned.  Ticket Number " . $ticket->numberToVoice() . "," . $ticket->short_description . ", Site Code " . $this->nameToVoice();
+								$this->escalateSup($msg);
+							}
+							if($this->last_opened->lt(Carbon::now()->subMinutes(env("TROPO_UNASSIGNED_ONCALL_ALERT_DELAY"))) && !$ticket->assigned_to && !$this->called_oncall) {
+								$msg = "A " . $ticket->getPriorityString() . " priority incident has been opened for more than " . env("TROPO_UNASSIGNED_ONCALL_ALERT_DELAY") . " minutes and is currently not assigned.  Ticket Number " . $ticket->numberToVoice() . "," . $ticket->short_description . ", Site Code " . $this->nameToVoice();
+								$this->escalateOncall($msg);
+							}
 						}
 					}
 				//IF INCIDENT IS CLOSED
@@ -360,7 +511,7 @@ class Incident extends Model
 			{
 				//Create a new snow ticket
 				print $this->name . " Create SNOW ticket!\n";
-				$this->create_ticket();
+				$this->createNewTicket();
 			}
 		}
 	}
