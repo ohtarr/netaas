@@ -350,7 +350,7 @@ class Incident extends Model
 
 	public function escalateSup($msg)
 	{
-		$this->callVoice(env("TROPO_ONCALL_NUMBER"),$msg);
+		$this->callVoice(env("TROPO_SUP_NUMBER"),$msg);
 		$this->called_sup = Carbon::now();
 		$this->save();
 	}
