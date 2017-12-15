@@ -33,18 +33,7 @@ class State extends Model
 	{
 		return State::where('name', 'like', '%' . $this->get_sitecode() . '%')->where('type','device')->whereNull("incident_id")->get();
 	}
-	/*
-	public function get_unresolved_site_states()
-	{
-		return State::where('name', 'like', '%' . $this->get_sitecode() . '%')->where('type','device')->where('resolved',0)->get();
-	}
-	/**/
-	/*
-	public function get_unprocessed_unassigned_site_states()
-	{
-		return State::where('name', 'like', '%' . $this->get_sitecode() . '%')->where('type','device')->where('processed',0)->whereNull("incident_id")->get();
-	}
-/**/	
+
 	//Locate an existing incident for this state.
 	public function find_incident()
 	{
@@ -56,8 +45,10 @@ class State extends Model
 			{
 				return $incident;
 			}
+		//find any existing DEVICE incidents first.
 		} elseif($deviceincident = Incident::where('type', "device")->where('name', $this->name)->first()){
 			return $deviceincident;
+		//Now look for any existing SITE incidents.
 		} elseif($siteincident = Incident::where('type', "site")->where('name', $this->get_sitecode())->first()){
 			return $siteincident;
 		} else {
@@ -85,8 +76,8 @@ class State extends Model
 			}
 		//If there is only 1 device and it is NOT resolved
 		} else {
-			//if($this->resolved == 0)
-			//{
+			if($this->resolved == 0)
+			{
 				//Create a device incident for single device.
 				if($incident = $this->create_incident($this->name, 'device'))
 				{
@@ -94,44 +85,10 @@ class State extends Model
 					$this->processed = 1;
 					$this->save();
 				}
-			//}
-		}
-	}
-/*
-	//check for existing incident and create one of proper type if needed!
-	public function process_state_incident()
-	{
-		//Find any existing incidents.
-		$incident = $this->find_incident();
-		//If no incident is found
-		if (!$incident)
-		{
-			//Find any other states with same site code.
-			$sitestates = $this->get_site_states();
-			//If there is more than 1 device with same site code in state table
-			if($sitestates->count() > 1)
-			{
-				//Create a SITE incident for multiple devices, even if they are resolved.
-				$incident = $this->create_incident($this->get_sitecode(), 'site');
-				foreach($sitestates as $sitestate)
-				{
-					print "SITE!\n";
-					$sitestate->incident_id = $incident->id;
-					$sitestate->save();
-				}
-			//If there is only 1 device and it is NOT resolved
-			} elseif (!$this->resolved) {
-				print "DEVICE!\n";
-				//Create a device incident for single device.
-				$incident = $this->create_incident($this->name, 'device');
-				$this->incident_id = $incident->id;
-				$this->save();
 			}
 		}
-		//Return the incident
-		return $incident;
 	}
-/**/
+
 	//Created an incident in the incident table
 	public function create_incident($name, $type)
 	{
@@ -144,171 +101,5 @@ class State extends Model
 		//Return the new incident.
 		return $newinc;
 	}
-/*
-	//Function to update a TICKET with comment.
-	public function comment_ticket($msg)
-	{
-		$incident = Incident::find($this->incident_id);
-		if($incident)
-		{
-			$ticket = $incident->get_ticket();
-			if($ticket)
-			{
-				print $this->name . " ADD COMMENT: " . $msg . "\n";
-				$ticket->add_comment($msg);
-			}
-		}
-	}
-/**/
-/*
-	//Check if this is a stale state that is no longer needed.  DELETE if stale.
-	public function process_stale()
-	{
-		print "processing Stale States \n";
-		//Check for existing incident
-		$incident = $this->find_incident();
-		//Time 30 minutes prior to last update
-		$mins = Carbon::now()->subMinutes(env('TIMER_DELETE_STALE_STATES'));
-		//If it hasn't been updated in 30 mintes, there is no incident, and it is marked RESOLVED
-		if($this->updated_at->lt($mins) && !$incident && $this->resolved)
-		{
-			//DELETE IT!
-			print "Deleting Stale Entry: " . $this->name . "\n";
-			$this->delete();
-		}
-	}
-/**/
-/*
-	public function process()
-	{
-		print "Processing State " . $this->name . "!!\n";
-		//Find an existing incident for this state
-		$incident = $this->find_incident();
-		//if there is an existing incident for this state
-		if($incident)
-		{
-			print "INCIDENT!\n";
-			//If this state does NOT have an incident ID assigned to it
-			if(!$this->incident_id)
-			{
-				print "INCIDENT ASSIGNED!\n";
-				//get the snow ticket from the incident
-				$ticket = $incident->get_ticket();
-				//Generate appropriate comment
-				if($this->resolved == 1)
-				{
-					$msg = "Received a RECOVERY notification for device " . $this->name . ".  Adding state tracking to this incident.";
-				} else {
-					$msg = "Received an ALERT notification for device " . $this->name . ".  Adding state tracking to this incident.";
-				}
-				//Add a comment to the snow ticket regarding new STATE.
-				$ticket->add_comment($msg);
-				//Assign the incident ID to this state
-				$this->incident_id = $incident->id;
-				$this->processed = 1;
-				$this->save();
-			}
-		//If there is no incident and sampling delay timer has passed
-		} elseif ($this->updated_at < Carbon::now()->subMinutes(env('TIMER_STATE_SAMPLING_DELAY'))){
-			//Create a new incident
-			$incident = $this->process_state_incident();
-			//If an incident was created successfully
-			if ($incident)
-			{
-				//mark state as processed
-				$this->processed = 1;
-				$this->save();
-			//If an incident was NOT created successfully
-			} else {
-				//Check for a stale state (single device that is recovered before an incident could be made)
-				$this->process_stale();
-			}
-		}
-	}
-/**/	
-/*
-	public function process2()
-	{
-		if($this->processed == 0)
-		{
-			if(!$this->incident_id)
-			{
-				$incident = $this->find_incident();
-				$ustates = $this->get_unassigned_site_states();
-				if($incident)
-				{
-					if($incident->type == "site")
-					{
-						$msg = "The following devices have been added to this incident:\n";
-						foreach($ustates as $ustate)
-						{
-							$msg .= $ustate->name . "\n";
-							$ustate->incident_id = $incident->id;
-							$ustate->processed = 1;
-							$ustate->save();
-						}
-						if($ticket = $incident->get_ticket())
-						{
-							$ticket->add_comment($msg);
-						}
-					} elseif($incident->type == "device") {
-						$this->incident_id = $incident->id;
-						$this->processed = 1;
-						$this->save();
-					}
-				} else {
-					$unstates = $this->get_unprocessed_unassigned_site_states();
-					if($unstates->count() > 0 && $this->updated_at < Carbon::now()->subMinutes(env('TIMER_STATE_SAMPLING_DELAY')))
-					{
-						if($incident = $this->create_new_incident())
-						{
-							print "Created incident " . $incident->id . "...\n";
-						}
-					} elseif($unstates->count() == 0 && $this->updated_at->lt(Carbon::now()->subMinutes(env('TIMER_DELETE_STALE_STATES')))){
-						//DELETE IT!
-						print "Deleting Stale Entry: " . $this->name . "\n";
-						$this->delete();
-					}
-				}
-			} else {
-				
-			}
-		}
-	}
-/**/
 
-/*
-	public function update_ticket()
-	{
-		$msg = "";
-		if($this->incident_id)
-		{
-			$states = State::where("incident_id",$this->incident_id)->get();
-			if($states->isNotEmpty())
-			{
-				$unresolved = $states->where("resolved","0");
-				if($unresolved->isNotEmpty())
-				{
-					$msg .= "The following states are in an ALERT state: \n"; 
-					foreach($unresolved as $un)
-					{
-						$msg .= $un->name . "\n";
-					}
-					$msg .= "\n";
-				}
-				$resolved = $states->where("resolved","1");
-				if($resolved->isNotEmpty())
-				{
-					$msg .= "The following states are in a RECOVERED state: \n"; 
-					foreach($resolved as $re)
-					{
-						$msg .= $re->name . "\n";
-					}
-					$msg .= "\n";
-				}
-				$this->comment_ticket($msg);
-			}
-		}
-	}
-/**/	
 }

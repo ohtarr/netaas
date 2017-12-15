@@ -33,10 +33,13 @@ Route::get('incidents', function() {
 	return view('incidents',['incidents' => Incident::all()]);
 });
 
-Route::get('tickets', function() {
-	return view('tickets',['tickets' => Ticket::all()]);
-});
-
-Route::get('test', function() {
-	return view('child');
+Route::get('stats', function() {
+	return view('stats',[
+		'events'	=>	Event::withTrashed()->get(),
+		'states'	=>	State::withTrashed()->get(),
+		'incidents' =>	Incident::withTrashed()->get(),
+		'unassignedstates'	=>	State::withTrashed()->whereNull('incident_id')->get(),
+		'siteincidents'	=>	Incident::withTrashed()->where("type","site")->get(),
+		'deviceincidents'	=>	Incident::withTrashed()->where("type","device")->get(),
+	]);
 });

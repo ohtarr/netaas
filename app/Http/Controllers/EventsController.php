@@ -8,6 +8,11 @@ use Illuminate\Http\Request;
 class EventsController extends Controller
 {
 
+	public function getEvents()
+	{
+		return Event::all();
+	}
+
 	public function Netmon(Request $request)
 	{
 		$event = new Event;

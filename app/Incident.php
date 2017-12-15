@@ -32,14 +32,6 @@ class Incident extends Model
 		$this->save(); 
 	}
 
-	//open this incident
-	public function open()
-	{
-		//$this->last_opened = Carbon::now();
-		$this->resolved = 0;
-		$this->save();
-	}
-	
 	public function isOpen()
 	{
 		if ($this->resolved == 1 || $this->trashed())
@@ -61,27 +53,7 @@ class Incident extends Model
 		//DELETE this internal incident from database.
 		$this->delete();
 	}
-	
-	public static function isAfterHours()
-	{
-		$start = Carbon::createFromTime(env("TIME_WORKDAY_START"),0,0,env("TIME_ZONE"));
-		$end = Carbon::createFromTime(env("TIME_WORKDAY_END"),0,0,env("TIME_ZONE")); 
-		$now = Carbon::now(env("TIME_ZONE"));
-		if($now->isWeekday())
-		{
-			if($now->between($start, $end))
-			{
-				return false;
-			}
-		}
-		return true;
-	}
-	
-	public function nameToVoice()
-	{
-		return implode(" ", str_split($this->name));	
-	}
-	
+		
 	public function getUrgency()
 	{
 		$location = $this->get_location();
@@ -218,9 +190,9 @@ class Incident extends Model
 			$this->save();
 			if($urgency == 1)
 			{
-				if($this->isAfterHours())
+				if(Utility::isAfterHours())
 				{
-					$msg = "A High priority incident has been opened." . $ticket->numberToVoice() . ", Multiple devices are down at site " . $this->nameToVoice();
+					$msg = "A High priority incident has been opened." . Troppo::stringToVoice($ticket->number) . ", Multiple devices are down at site " . Troppo::stringToVoice($this->name);
 					$this->callOncall($msg);
 				}
 			}
@@ -256,13 +228,11 @@ class Incident extends Model
 			$ticket->assigned_to = "";
 			$ticket->state=2;
 			$ticket->save();
-			$ticketnumber = implode(" ", str_split($ticket->number));
-			$sitename = implode(" ", str_split($this->name));
-			if($this->isAfterHours())
+			if(Utility::isAfterHours())
 			{
 				if($ticket->priority == 1 || $ticket->priority == 2)
 				{
-					$msg = "A " . $ticket->getPriorityString() . " priority incident has been reopened.  Ticket Number " . $ticket->numberToVoice() . "," . $ticket->short_description . ", Site Code " . $this->nameToVoice();
+					$msg = "A " . $ticket->getPriorityString() . " priority incident has been reopened.  Ticket Number " . Troppo::stringToVoice($ticket->number) . "," . $ticket->short_description . ", Site Code " . Troppo::stringToVoice($this->name);
 					$this->callOncall($msg);
 				}
 			}
@@ -337,48 +307,56 @@ class Incident extends Model
 
 	public function callOncall($msg)
 	{
-		$this->callVoice(env("TROPO_ONCALL_NUMBER"),$msg);
-		$this->save();
+		$call = Troppo::callVoice(env("TROPO_ONCALL_NUMBER"),$msg);
+		if($call)
+		{
+			$ticket = $this->get_ticket();
+			if($ticket)
+			{
+				$comment = "Called network oncall at " . env("TROPO_ONCALL_NUMBER") . " and played the following message : \n";
+				$comment .= $msg;
+				$ticket->add_comment($comment);
+			}
+		} 
+		return $call;
 	}
 
 	public function escalateOncall($msg)
 	{
-		$this->callVoice(env("TROPO_ONCALL_NUMBER"),$msg);
-		$this->called_oncall = Carbon::now();
-		$this->save();
+		$call = Troppo::callVoice(env("TROPO_ONCALL_NUMBER"),$msg);
+		if($call)
+		{
+			$this->called_oncall = Carbon::now();
+			$this->save();
+			$ticket = $this->get_ticket();
+			if($ticket)
+			{
+				$comment = "Called network oncall at " . env("TROPO_ONCALL_NUMBER") . " and played the following message : \n";
+				$comment .= $msg;
+				$ticket->add_comment($comment);
+			}
+		}
+		return $call;
 	}
 
 	public function escalateSup($msg)
 	{
-		$this->callVoice(env("TROPO_SUP_NUMBER"),$msg);
-		$this->called_sup = Carbon::now();
-		$this->save();
+		$call = Troppo::callVoice(env("TROPO_SUP_NUMBER"),$msg);
+		if($call)
+		{
+			$this->called_sup = Carbon::now();
+			$this->save();
+			$ticket = $this->get_ticket();
+			if($ticket)
+			{
+				$comment = "Called network supervisor at " . env("TROPO_SUP_NUMBER") . " and played the following message : \n";
+				$comment .= $msg;
+				$ticket->add_comment($comment);
+			}
+		}
+		return $call;
 	}
 
-	public function callVoice($number, $msg)
-	{
-		$paramsarray = [
-			"token"		=>	env("TROPO_TOKEN"),
-			"from"		=>	env("TROPO_CALLERID"),
-			"msg"		=>	$msg,
-			"number"	=>	$number,
-		];
-		$params['body'] = json_encode($paramsarray);
-		$params['headers'] = [
-			'Content-Type'	=> 'application/json',
-			'Accept'		=> 'application/json',
-		];
-		$client = new GuzzleHttpClient;
-		try
-		{
-			$response = $client->request("POST", env("TROPO_BASE_URL"), $params);
-		} catch(\Exception $e) {
-		
-		}
-		//get the body contents and decode json into an array.
-		$array = json_decode($response->getBody()->getContents(), true);
-	}
-	
 	public function get_unresolved_states()
 	{
 		return State::where('incident_id', $this->id)->where("resolved",0)->get();
@@ -473,17 +451,17 @@ class Incident extends Model
 							$this->autoCloseTicket();
 						}
 					}
-					if($this->isAfterHours())
+					if(Utility::isAfterHours())
 					{
 						if($ticket->priority == 1 || $ticket->priority == 2)
 						{
 							if($this->last_opened->lt(Carbon::now()->subMinutes(env("TROPO_UNASSIGNED_SUP_ALERT_DELAY"))) && !$ticket->assigned_to && !$this->called_sup)
 							{
-								$msg = "A " . $ticket->getPriorityString() . " priority incident has been opened for more than " . env("TROPO_UNASSIGNED_SUP_ALERT_DELAY") . " minutes and is currently not assigned.  Ticket Number " . $ticket->numberToVoice() . "," . $ticket->short_description . ", Site Code " . $this->nameToVoice();
+								$msg = "A " . $ticket->getPriorityString() . " priority incident has been opened for more than " . env("TROPO_UNASSIGNED_SUP_ALERT_DELAY") . " minutes and is currently not assigned.  Ticket Number " . Troppo::stringToVoice($ticket->number) . "," . $ticket->short_description . ", Site Code " . Troppo::stringToVoice($this->name);
 								$this->escalateSup($msg);
 							}
 							if($this->last_opened->lt(Carbon::now()->subMinutes(env("TROPO_UNASSIGNED_ONCALL_ALERT_DELAY"))) && !$ticket->assigned_to && !$this->called_oncall) {
-								$msg = "A " . $ticket->getPriorityString() . " priority incident has been opened for more than " . env("TROPO_UNASSIGNED_ONCALL_ALERT_DELAY") . " minutes and is currently not assigned.  Ticket Number " . $ticket->numberToVoice() . "," . $ticket->short_description . ", Site Code " . $this->nameToVoice();
+								$msg = "A " . $ticket->getPriorityString() . " priority incident has been opened for more than " . env("TROPO_UNASSIGNED_ONCALL_ALERT_DELAY") . " minutes and is currently not assigned.  Ticket Number " . Troppo::stringToVoice($ticket->number) . "," . $ticket->short_description . ", Site Code " . Troppo::stringToVoice($this->name);
 								$this->escalateOncall($msg);
 							}
 						}
@@ -501,7 +479,8 @@ class Incident extends Model
 						}
 					}
 					$ticket->add_comment($msg);
-					$this->open();
+					$this->resolved = 0;
+					$this->save();
 				}
 			}
 		//IF THERE IS NO SNOW TICKET

@@ -2,72 +2,13 @@
 
 namespace App;
 
-use Illuminate\Database\Eloquent\Model;
-//use GuzzleHttp\Client as GuzzleHttpClient;
+use ohtarr\ServiceNowModel;
 
-class ServiceNowIncident extends Model
+class ServiceNowIncident extends ServiceNowModel
 {
 	protected $guarded = [];
 
 	public $table = "incident";
-
-	public function newQuery()
-	{
-		$builder = new ServiceNowQueryBuilder();
-		$builder->setModel($this);
-		return $builder;
-	}
-
-	//get all records created by this system
-    public static function all_mine($columns = ['*'])
-    {
-		$instance = new static;
-		return $instance->newQuery()
-						->where('sys_created_by', '=', env('SNOW_USERNAME'))
-						->get();
-    }
-
-	//get all table records
-    public static function all($columns = ['*'])
-    {
-		$instance = new static;
-		return $instance->newQuery()
-						->get();
-    }
-
-	//Find a snow ticket via sysid
-	public static function find($sysid)
-	{
-		$instance = new static;
-		return $instance->newQuery()
-						->where('sys_id',"=", $sysid)
-						->get()
-						->first();
-	}
-	//Update a snow ticket
-	public function save(array $options = [])
-	{
-		if($this->sys_id)
-		{
-			//return $this->newQuery()->put();
-			$return = $this->newQuery()->put();
-
-		} else {
-			//return $this->newQuery()->post();
-			$return = $this->newQuery()->post();
-		}
-		$this->fill($return->toArray());
-		$this->syncOriginal();
-		return $this;
-		//return $return;
-	}
-	//Create a new Snow Ticket
-	public static function create($attribs = [])
-	{
-		$instance = new static($attribs);
-		//return $instance->newQuery()->post();
-		return $instance->save();
-	}
 	
 	public function close($msg)
 	{
@@ -87,7 +28,6 @@ class ServiceNowIncident extends Model
 	{
 		$this->comments = $comment;
 		$this->save();
-		//return $this;
 	}
 	
 	public function get_incident()
@@ -125,11 +65,6 @@ class ServiceNowIncident extends Model
 			$string = "low";
 		}
 		return $string;
-	}
-
-	public function numberToVoice()
-	{
-		return implode(" ", str_split($this->number));
 	}
 
 	public function cancel_unused_tickets()

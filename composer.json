@@ -10,7 +10,8 @@
         "geerlingguy/ping": "^1.1",
         "guzzlehttp/guzzle": "~6.0",
         "laravel/framework": "5.5.*",
-        "laravel/tinker": "~1.0"
+        "laravel/tinker": "~1.0",
+        "ohtarr/service-now-model": "dev-master"
     },
     "require-dev": {
         "filp/whoops": "~2.0",
