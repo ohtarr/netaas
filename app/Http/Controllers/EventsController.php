@@ -10,7 +10,7 @@ class EventsController extends Controller
 
 	public function getEvents()
 	{
-		return Event::all();
+		return Event::withTrashed()->get();
 	}
 
 	public function Netmon(Request $request)

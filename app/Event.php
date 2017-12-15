@@ -11,7 +11,6 @@ class Event extends Model
 {
 	use SoftDeletes;
 	
-	
 	public function get_state()
 	{
 		return State::where('name', $this->name)->first();
