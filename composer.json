@@ -11,6 +11,7 @@
         "guzzlehttp/guzzle": "~6.0",
         "laravel/framework": "5.5.*",
         "laravel/tinker": "~1.0",
+        "nanigans/single-table-inheritance": "0.8.*",
         "ohtarr/service-now-model": "dev-master"
     },
     "require-dev": {
