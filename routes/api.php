@@ -2,6 +2,7 @@
 
 use Illuminate\Http\Request;
 use App\Http\Controllers\EventsController;
+use Carbon\Carbon;
 
 /*
 |--------------------------------------------------------------------------
@@ -22,14 +23,18 @@ Route::post('/netmon/', 'EventsController@Netmon');
 
 Route::get('/events/', 'EventsController@getEvents');
 
-Route::get('/events/between1/', 'EventsController@getEventsBetween');
-
 Route::get('/events/between/{date1}/{date2}', function($start, $end){
 	return EventsController::getEventsBetween($start, $end);
 });
 
 Route::get('/events/lastdays/{days}', function($days){
 	return EventsController::getEventsLastDays($days);
+});
+
+Route::get('/events/yesterday/', function(){
+	$start = Carbon::Yesterday();
+	$end = Carbon::Today(); 
+	return EventsController::getEventsBetween($start,$end);
 });
 
 
