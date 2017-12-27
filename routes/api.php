@@ -31,10 +31,6 @@ Route::get('/events/lastdays/{days}', function($days){
 	return EventsController::getEventsLastDays($days);
 });
 
-Route::get('/events/yesterday/', function(){
-	$start = Carbon::Yesterday();
-	$end = Carbon::Today(); 
-	return EventsController::getEventsBetween($start,$end);
-});
+Route::get('/events/yesterday/', 'EventsController@getYesterday');
 
 

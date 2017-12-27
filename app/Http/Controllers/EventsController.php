@@ -28,6 +28,13 @@ class EventsController extends Controller
 		return Event::withTrashed()->where('created_at', ">", Carbon::now()->subDays($days))->get();
 	}
 
+	public static function getYesterday()
+	{
+		$start = Carbon::Yesterday();
+		$end = Carbon::Today(); 
+		return self::getEventsBetween($start, $end);
+	}
+
 	public function Netmon(Request $request)
 	{
 		$event = new Event;
