@@ -13,43 +13,19 @@ class Event extends Model
 	
 	public function get_state()
 	{
-		return State::where('name', $this->name)->first();
+		return State::where('name', $this->name)->where('type', $this->type)->where('entity_name', $this->entity_name)->first();
 	}
 
 	public function create_state()
 	{
 		return State::create([
-			'name'		=>	$this->name,
-			'type'		=>	$this->type,
-			'resolved'	=>	$this->resolved,
-			'processed'	=>	0,
+			'name'					=>	$this->name,
+			'type'					=>	$this->type,
+			'resolved'				=>	$this->resolved,
+			'processed'				=>	0,
+			'entity_name'			=>	$this->entity_name,
+			'entity_desc'			=>	$this->entity_desc,
 		]);
 	}
 
-/*
-	public function process()
-	{
-		print "Processing event for device " . $this->name . "...\n";
-		$state = $this->get_state();
-		if($state)
-		{
-			$state->resolved = $this->resolved;
-			$state->processed = 0;
-			$state->save();
-//			if($this->resolved)
-//			{
-//				$this->comment_ticket("Device " . $this->name . " has RECOVERED.");
-//			} else {
-//				$this->comment_ticket("Device " . $this->name . " has generated an ALERT.");
-//			}
-		} else {
-			$state = $this->create_state();
-		}
-		if($state)
-		{
-			$this->processed = 1;
-			$this->save();
-		}
-	}
-	/**/
 }

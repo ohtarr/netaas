@@ -10,7 +10,7 @@ use Carbon\Carbon;
 class State extends Model
 {
 	use SoftDeletes;
-	protected $fillable = ['name','type','state','processed','resolved'];
+	protected $fillable = ['name','type','state','processed','resolved','entity_name','entity_desc'];
 
 	//Convert state name to site code
 	public function get_sitecode()
@@ -24,14 +24,23 @@ class State extends Model
 		return $sitecode;
 	}
 	
+	/*
 	public function get_site_states()
 	{
 		return State::where('name', 'like', '%' . $this->get_sitecode() . '%')->where('type','device')->get();	
 	}
-	
+	/**/
+	/*
 	public function get_unassigned_site_states()
 	{
-		return State::where('name', 'like', '%' . $this->get_sitecode() . '%')->where('type','device')->whereNull("incident_id")->get();
+		return State::where('name', 'like', '%' . $this->get_sitecode() . '%')->whereNull("incident_id")->get();
+	}
+	/**/
+	public function getUnassignedUniqueDeviceSiteStates()
+	{
+		$states = State::where('name', 'like', '%' . $this->get_sitecode() . '%')->whereNull("incident_id")->get();
+		return $states->groupBy('name');
+		//return $states;
 	}
 
 	//Locate an existing incident for this state.
@@ -45,8 +54,8 @@ class State extends Model
 			{
 				return $incident;
 			}
-		//find any existing DEVICE incidents first.
-		} elseif($deviceincident = Incident::where('type', "device")->where('name', $this->name)->first()){
+		//find any existing incidents first.
+		} elseif($deviceincident = Incident::where('name',$this->name)->first()){
 			return $deviceincident;
 		//Now look for any existing SITE incidents.
 		} elseif($siteincident = Incident::where('type', "site")->where('name', $this->get_sitecode())->first()){
@@ -60,31 +69,34 @@ class State extends Model
 	
 	public function create_new_incident()
 	{
-		$usitestates = $this->get_unassigned_site_states();
+		//$usitedevices = $this->get_unassigned_site_states()->groupBy('name');
+		$usitedevices = $this->getUnassignedUniqueDeviceSiteStates();		
 		//If there is more than 1 device with same site code in state table
-		if($usitestates->count() > 1)
+		if($usitedevices->count() > 1)
 		{
-			//Create a SITE incident for multiple devices, even if they are resolved.
-			if($incident = $this->create_incident($this->get_sitecode(), 'site'))
-			{
-				foreach($usitestates as $usitestate)
-				{
-					$usitestate->incident_id = $incident->id;
-					$usitestate->processed = 1;
-					$usitestate->save();
-				}
-			}
-		//If there is only 1 device and it is NOT resolved
+			$type = "site";
+			$name = $this->get_sitecode();
 		} else {
-			if($this->resolved == 0)
+			$type = "device";
+			$name = $this->name;
+		}
+		//Create an incident is it is a SITE, or a device that is still unresolved
+		if ($type == "site" || $this->resolved == 0)
+		{
+			$incident = $this->create_incident($name, $type);
+			if($incident)
 			{
-				//Create a device incident for single device.
-				if($incident = $this->create_incident($this->name, 'device'))
+				//Loop through each DEVICE
+				foreach($usitedevices as $usitedevice)
 				{
-					$this->incident_id = $incident->id;
-					$this->processed = 1;
-					$this->save();
-				}
+					//Loop through each device STATE
+					foreach($usitedevice as $usitedevicestate)
+					{
+						$usitedevicestate->incident_id = $incident->id;
+						$usitedevicestate->processed = 1;
+						$usitedevicestate->save();
+					}
+				}		
 			}
 		}
 	}

@@ -90,24 +90,37 @@ class Incident extends Model
 		return $location;
 	}
 
-	public function create_ticket_description()
+	public function getStateStatus()
 	{
 		$description = "";
-		if($this->type == "site")
+		foreach($this->getUniqueDeviceStates() as $name => $device)
 		{
-			$description .= "The following devices are in an ALERT state at site " . strtoupper($this->name) . ": \n";
-			foreach($this->get_states() as $state)
+			$description .= "DEVICE " . $name . ":\n";
+			foreach($device as $state)
 			{
-				$description .= $state->name . "\n";
+				$state->processed = 1;
+				$state->save();
+				$description .= $state->type . "\t";
+				$description .= $state->entity_name . "\t";
+				if($state->resolved == 0)
+				{
+					$description .= "DOWN\t";
+				} else {
+					$description .= "UP\t";
+				}
+				$description .= $state->entity_desc . "\n";
 			}
+			$description .= "\n";
 		}
-		if($this->type == "device")
-		{
-			$description .= "The following device is in an ALERT state : \n";
-			$description .= strtoupper($this->name) . "\n";
-		}
+		return $description;
+	}
+	
+	public function createTicketDescription()
+	{
+		$description = "";
 
-		$description .= "\n";
+		$description .= "The following ALERTS have been received: \n\n";
+		$description .= $this->getStateStatus();
 		$location = $this->get_location();
 		if ($location)
 		{
@@ -125,14 +138,7 @@ class Incident extends Model
 				$description .= "Site Contact: \nName: " . $contact->name . "\nPhone: " . $contact->phone . "\n";			
 			}
 			$description .= "*****************************************************\n";
-			if($location->u_priority == 0)
-			{
-				$description .= "Site Priority: NO MONITORING!\n";
-			} elseif ($location->u_priority == 1) {
-				$description .= "Site Priority: NEXT BUSINESS DAY\n";
-			} elseif ($location->u_priority == 2) {
-				$description .= "Site Priority: 24/7\n";
-			}
+			$description .= "Site Priority: " . $location->getPriorityString() . "\n";
 			$opengear = $location->getOpengear();
 			$description .= "*****************************************************\n";
 			if($opengear)
@@ -154,24 +160,19 @@ class Incident extends Model
 		return $description;
 	}
 
-	public function createNewTicket()
+	public function createTicket()
 	{
 		$urgency = $this->getUrgency();
 		if($this->type == "site")
 		{
-			$summary = "Multiple devices down at site " . strtoupper($this->name);
+			$summary = "ALERTS have been received for MULTIPLE devices at site " . strtoupper($this->name);
 		}
 		if($this->type == "device")
 		{
-			$summary = "Device " . strtoupper($this->name) . " is down!";
-		}
-		$ticket = $this->createTicket($urgency, $summary);
-		return $ticket;
-	}
-
-	public function createTicket($urgency, $summary)
-	{
-		$description = $this->create_ticket_description();
+			$summary = "ALERTS have been received for device " . strtoupper($this->name);
+		}	
+	
+		$description = $this->createTicketDescription();
 		print "Creating Ticket of type " . $this->type . "\n";
 		$ticket = ServiceNowIncident::create([
 			"cmdb_ci"			=>	env('SNOW_cmdb_ci'),
@@ -192,7 +193,7 @@ class Incident extends Model
 			{
 				if(Utility::isAfterHours())
 				{
-					$msg = "A High priority incident has been opened." . Troppo::stringToVoice($ticket->number) . ", Multiple devices are down at site " . Troppo::stringToVoice($this->name);
+					$msg = "A " . $ticket->getPriorityString() . " priority incident has been opened." . Troppo::stringToVoice($ticket->number) . ", Multiple devices are down at site " . Troppo::stringToVoice($this->name);
 					$this->callOncall($msg);
 				}
 			}
@@ -257,6 +258,12 @@ class Incident extends Model
 		return State::where('incident_id', $this->id)->get();
 	}
 	
+	public function getUniqueDeviceStates()
+	{
+		$states = State::where('incident_id', $this->id)->get();
+		return $states->groupBy('name');
+	}
+	
 	public function get_latest_state()
 	{
 		$states = $this->get_states();
@@ -276,29 +283,8 @@ class Incident extends Model
 		$msg = "";
 		if($ticket = $this->get_ticket())
 		{
-			$ustates = $this->get_unresolved_states();
-			$rstates = $this->get_resolved_states();
 			$msg.= "State update detected.  Current status:\n";
-			if($ustates->isNotEmpty())
-			{
-				$msg .= "The following states are in an ALERT state: \n";
-				foreach($ustates as $ustate)
-				{
-					$msg .= $ustate->name . "\n";
-					$ustate->processed = 1;
-					$ustate->save();
-				}
-			}
-			if($rstates->isNotEmpty())
-			{
-				$msg .= "\nThe following states are in a RECOVERED state: \n";
-				foreach($rstates as $rstate)
-				{
-					$msg .= $rstate->name . "\n";
-					$rstate->processed = 1;
-					$rstate->save();
-				}
-			}
+			$msg .= $this->getStateStatus();
 			$ticket->add_comment($msg);
 			return 1;
 		}
@@ -384,8 +370,9 @@ class Incident extends Model
 		return null;
 	}
 
-	public function checkTickets()
+	public function process()
 	{
+		print "Processing Incident " . $this->name . "!!\n";
 		//Fetch me our ticket
 		$ticket = $this->get_ticket();
 		$states = $this->get_states();
@@ -490,14 +477,8 @@ class Incident extends Model
 			{
 				//Create a new snow ticket
 				print $this->name . " Create SNOW ticket!\n";
-				$this->createNewTicket();
+				$this->createTicket();
 			}
 		}
-	}
-
-	public function process()
-	{
-		print "Processing Incident " . $this->name . "!!\n";
-		$this->checkTickets();
 	}
 }
