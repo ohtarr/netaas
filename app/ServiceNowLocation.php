@@ -21,6 +21,22 @@ class ServiceNowLocation extends ServiceNowModel
 		}
 		return null;
 	}
+
+	public function getPriorityString()
+	{
+		if($this->u_priority == 0)
+		{
+			return "NO MONITORING";
+		}
+		if($this->u_priority == 1)
+		{
+			return "NEXT BUSINESS DAY";
+		}
+		if($this->u_priority == 2)
+		{
+			return "24/7";
+		}
+	}
 	
 	public function getWeather()
 	{
