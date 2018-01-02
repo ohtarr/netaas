@@ -42,7 +42,13 @@ class State extends Model
 		return $states->groupBy('name');
 		//return $states;
 	}
-
+	
+	public function getUnresolvedUnassignedUniqueDeviceSiteStates()
+	{
+		$states = State::where('name', 'like', '%' . $this->get_sitecode() . '%')->whereNull("incident_id")->where("resolved",0)->get();
+		return $states->groupBy('name');
+		//return $states;
+	}
 	//Locate an existing incident for this state.
 	public function find_incident()
 	{

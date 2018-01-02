@@ -13,14 +13,14 @@ class Event extends Model
 	
 	public function get_state()
 	{
-		return State::where('name', $this->name)->where('type', $this->type)->where('entity_name', $this->entity_name)->first();
+		return State::where('name', $this->name)->where('type', $this->message)->where('entity_name', $this->entity_name)->first();
 	}
 
 	public function create_state()
 	{
 		return State::create([
 			'name'					=>	$this->name,
-			'type'					=>	$this->type,
+			'type'					=>	$this->message,
 			'resolved'				=>	$this->resolved,
 			'processed'				=>	0,
 			'entity_name'			=>	$this->entity_name,
