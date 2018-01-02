@@ -372,7 +372,6 @@ class Incident extends Model
 
 	public function process()
 	{
-		print "Processing Incident " . $this->name . "!!\n";
 		//Fetch me our ticket
 		$ticket = $this->get_ticket();
 		$states = $this->get_states();
@@ -476,7 +475,7 @@ class Incident extends Model
 			if($this->type == "site" || $unstates->isNotEmpty())
 			{
 				//Create a new snow ticket
-				print $this->name . " Create SNOW ticket!\n";
+				print $this->name . " Creating a SNOW ticket!\n";
 				$this->createTicket();
 			}
 		}

@@ -41,13 +41,17 @@ class processIncidents extends Command
 		$this->process();
     }
 
-	public function process()
+	public static function process()
 	{
+		print "*******************************************\n";
+		print "***********Processing Incidents************\n";
+		print "*******************************************\n";
 		$incidents = Incident::all();
 		if($incidents->isNotEmpty())
 		{
 			foreach($incidents as $incident)
 			{
+				print "Processing INCIDENT " . $incident->name . "\n";
 				$incident->process();
 			}
 		}

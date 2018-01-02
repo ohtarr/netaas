@@ -41,23 +41,30 @@ class processEvents extends Command
 		$this->process();
     }
 
-	public function process()
+	public static function process()
 	{
+		print "*******************************************\n";
+		print "***********Processing Events***************\n";
+		print "*******************************************\n";
 		$events = Event::where("processed",0)->get();
 		
 		foreach($events as $event)
 		{
+			print "Processing EVENT " . $event->name . "\n";
 			$state = $event->get_state();
 			if($state)
 			{
+				print "State " . $state->name . " found, updating State.\n";
 				$state->resolved = $event->resolved;
 				$state->processed = 0;
 				$state->save();
 			} else {
+				print "No State found.  Creating a new State.\n";
 				$state = $event->create_state();
 			}
 			if($state)
 			{
+				print "Flagging Event processed.\n";
 				$event->processed = 1;
 				$event->save();
 			}
