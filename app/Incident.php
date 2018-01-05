@@ -208,15 +208,8 @@ class Incident extends Model
 		$unstates = $this->get_unresolved_states();
 		if($ticket)
 		{
-			//COMMENT SNOW TICKET
-			$msg = "The following devices have entered an alert state: \n";
-			//REOPEN INCIDENT AND SNOW TICKET
-			foreach($unstates as $unstate)
-			{
-				$msg .= $unstate->name . "\n";
-				$unstate->processed = 1;
-				$unstate->save();
-			}
+			$msg = "The following ALERTS have been received: \n";
+			$msg .= $this->getStateStatus();
 			$msg .= "\nReopening the ticket!";
 			$ticket->add_comment($msg);
 			$this->resolved = 0;
@@ -459,11 +452,8 @@ class Incident extends Model
 					{
 						$msg = "Ticket was manually re-opened.  Currently there are NO devices in an ALERT state.";
 					} else {
-						$msg = "Ticket was manually re-opened.  The following devices are currently in an ALERT state: \n";
-						foreach($unstates as $unstate)
-						{
-							$msg .= $unstate->name . "\n";
-						}
+						$msg = "Ticket was manually re-opened.  The following are currently in an ALERT state: \n";
+						$msg .= $this->getStateStatus();
 					}
 					$ticket->add_comment($msg);
 					$this->resolved = 0;
