@@ -42,7 +42,7 @@ class Incident extends Model
 		}
 	}
 	
-	public function purge()
+	public function purgeStates()
 	{
 		$states = $this->get_states();
 		//Delete all states associated to this internal incident
@@ -50,15 +50,22 @@ class Incident extends Model
 		{
 			$state->delete();
 		}
-		//DELETE this internal incident from database.
+		//DELETE this internal incident from database.	
+	}
+	
+	public function purge()
+	{
+		$this->purgeStates();
 		$this->delete();
 	}
 		
 	public function getUrgency()
 	{
 		$location = $this->get_location();
-		if($this->type == "site")
+		if($this->type == "company")
 		{
+			$urgency = 1;
+		} elseif($this->type == "site") {
 			if($location)
 			{
 				if($location->u_priority == 2)
@@ -74,6 +81,16 @@ class Incident extends Model
 			$urgency = 3;
 		}
 		return $urgency;
+	}
+	
+	public function getImpact()
+	{
+		if($this->type == "company")
+		{
+			return 1;
+		} else {
+			return 2;
+		}	
 	}
 	
 	public function get_location()
@@ -115,47 +132,55 @@ class Incident extends Model
 		return $description;
 	}
 	
+	public function createLocationDescription()
+	{
+		if($this->type != "company")
+		{
+			$location = $this->get_location();
+			if($location)
+			{
+				$description .= "*****************************************************\n";
+				$description .= "SITE NAME: " . $location->name . "\n\n";
+				$description .= "Display Name: " . $location->u_display_name . "\n\n";
+				$description .= "Description: " . $location->description . "\n\n";
+				$description .= "Address: " . $location->street . ", " . $location->city . ", " . $location->state . ", " . $location->zip . "\n\n";
+				$description .= "Comments: \n" . $location->u_comments . "\n\n";
+
+				$contact = $location->getContact();
+				if($contact)
+				{
+					$description .= "*****************************************************\n";
+					$description .= "Site Contact: \nName: " . $contact->name . "\nPhone: " . $contact->phone . "\n";			
+				}
+				$description .= "*****************************************************\n";
+				$description .= "Site Priority: " . $location->getPriorityString() . "\n";
+				$opengear = $location->getOpengear();
+				$description .= "*****************************************************\n";
+				if($opengear)
+				{
+					$description .= "Opengear " . strtoupper($location->name) . "OOB01 status: " . $opengear . "\n";
+				} else {
+					$description .= "Opengear " . strtoupper($location->name) . "OOB01 does NOT exist!\n";
+				}
+				$weatherdesc = $location->getWeather();
+				if($weatherdesc)
+				{
+				$description .= "*****************************************************\n";
+				$description .= "Weather Information : " . $weatherdesc . "\n";
+				}
+				return $description;
+			}
+		}
+		return "";
+	}
+	
 	public function createTicketDescription()
 	{
 		$description = "";
 
 		$description .= "The following ALERTS have been received: \n\n";
 		$description .= $this->getStateStatus();
-		$location = $this->get_location();
-		if ($location)
-		{
-			$description .= "*****************************************************\n";
-			$description .= "SITE NAME: " . $location->name . "\n\n";
-			$description .= "Display Name: " . $location->u_display_name . "\n\n";
-			$description .= "Description: " . $location->description . "\n\n";
-			$description .= "Address: " . $location->street . ", " . $location->city . ", " . $location->state . ", " . $location->zip . "\n\n";
-			$description .= "Comments: \n" . $location->u_comments . "\n\n";
-
-			$contact = $location->getContact();
-			if($contact)
-			{
-				$description .= "*****************************************************\n";
-				$description .= "Site Contact: \nName: " . $contact->name . "\nPhone: " . $contact->phone . "\n";			
-			}
-			$description .= "*****************************************************\n";
-			$description .= "Site Priority: " . $location->getPriorityString() . "\n";
-			$opengear = $location->getOpengear();
-			$description .= "*****************************************************\n";
-			if($opengear)
-			{
-				$description .= "Opengear " . strtoupper($location->name) . "OOB01 status: " . $opengear . "\n";
-			} else {
-				$description .= "Opengear " . strtoupper($location->name) . "OOB01 does NOT exist!\n";
-			}
-			$weatherdesc = $location->getWeather();
-			if($weatherdesc)
-			{
-			$description .= "*****************************************************\n";
-			$description .= "Weather Information : " . $weatherdesc . "\n";
-			}
-		} else {
-			$description .= 'Location "' . strtoupper(substr($this->name,0,8)) . '" not found!';
-		}
+		$description .= $this->createLocationDescription();
 		$description .= "*****************************************************\n";
 		return $description;
 	}
@@ -163,6 +188,11 @@ class Incident extends Model
 	public function createTicket()
 	{
 		$urgency = $this->getUrgency();
+		$impact = $this->getImpact();
+		if($this->type == "company")
+		{
+			$summary = "ALERTS have been received for more than " . env("COMPANY_OUTAGE_COUNT") . " locations!";
+		}
 		if($this->type == "site")
 		{
 			$summary = "ALERTS have been received for MULTIPLE devices at site " . strtoupper($this->name);
@@ -176,7 +206,7 @@ class Incident extends Model
 		print "Creating Ticket of type " . $this->type . "\n";
 		$ticket = ServiceNowIncident::create([
 			"cmdb_ci"			=>	env('SNOW_cmdb_ci'),
-			"impact"			=>	2,
+			"impact"			=>	$impact,
 			"urgency"			=>	$urgency,
 			"short_description"	=>	$summary,
 			"description"		=>	$description,
@@ -253,7 +283,7 @@ class Incident extends Model
 	
 	public function getUniqueDeviceStates()
 	{
-		$states = State::where('incident_id', $this->id)->get();
+		$states = $this->get_states();
 		return $states->groupBy('name');
 	}
 	
@@ -367,7 +397,6 @@ class Incident extends Model
 	{
 		//Fetch me our ticket
 		$ticket = $this->get_ticket();
-		$states = $this->get_states();
 		$unstates = $this->get_unresolved_states();
 		$unpstates = $this->get_unprocessed_states();
 		
@@ -383,26 +412,21 @@ class Incident extends Model
 				//IF INCIDENT IS NOT RESOLVED
 				if($this->isOpen())
 				{
-					if($unstates->isEmpty())
-					{
-						//ALL STATES ARE RESOLVED AND TICKET WAS MANUALLY CLOSED
-						$msg = "Manual ticket closure was detected, but all states are resolved anyways.  Clearing " . $this->name . " from Netaas system.\n";
-					} else {
-						//ALL STATES ARE NOT RESOLVED AND TICKET WAS MANUALLY CLOSED
-						$msg = "Manual ticket closure was detected, but all states were NOT resolved.  Clearing " . $this->name . " from Netaas system.\n";
-					}
-					$msg .= "The following STATES have been removed from the Netaas system: \n";
-
-					//DELETE ALL STATES for this incident
-					foreach($states as $state)
-					{
-						$msg .= $state->name . "\n";
-						$state->delete();
-					}
+					$msg = "Manual ticket closure was detected.  Clearing " . $this->name . " from Netaas system.\n";
+					$msg .= "Current status of States: \n";
+					$msg .= $this->getStateStatus();
 					//ADD COMMENT TO TICKET
 					$ticket->add_comment($msg);
 					//Set incident to RESOLVED
-					$this->close();
+					if($this->type == "company")
+					{
+						//Purge all states attached to this incident and the incident.
+						$this->purge();
+					} else {
+						//Purge all states attached to this incident.
+						$this->purgeStates();
+						$this->close();
+					}
 				//IF INCIDENT IS RESOLVED
 				} else {
 					//If there are unresolved states, reopen ticket

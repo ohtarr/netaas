@@ -49,6 +49,22 @@ class State extends Model
 		return $states->groupBy('name');
 		//return $states;
 	}
+
+	public static function getAllUnassignedSites()
+	{
+		$allstates = State::whereNull("incident_id")->get();
+		$devices = $allstates->groupBy('name');
+		foreach($devices as $device)
+		{
+			foreach($device as $entity)
+			{
+				$sites[] = substr($entity->name,0,8);
+			}
+		}
+		$sites = array_unique($sites);
+		return $sites;
+	}
+	
 	//Locate an existing incident for this state.
 	public function find_incident()
 	{
@@ -66,6 +82,8 @@ class State extends Model
 		//Now look for any existing SITE incidents.
 		} elseif($siteincident = Incident::where('type', "site")->where('name', $this->get_sitecode())->first()){
 			return $siteincident;
+		} elseif($deviceincident = Incident::where('type','company')->first()){
+			return $deviceincident;
 		} else {
 			//No found incidents = Return null!
 			print "No incident found!\n";
@@ -75,11 +93,15 @@ class State extends Model
 	
 	public function create_new_incident()
 	{
+		$sites = $this->getAllUnassignedSites();		
 		//$usitedevices = $this->get_unassigned_site_states()->groupBy('name');
-		$usitedevices = $this->getUnassignedUniqueDeviceSiteStates();		
+		$usitedevices = $this->getUnassignedUniqueDeviceSiteStates();
 		//If there is more than 1 device with same site code in state table
-		if($usitedevices->count() > 1)
+		if(count($sites) > env("COMPANY_OUTAGE_COUNT"))
 		{
+			$type = "company";
+			$name = "company";
+		} elseif($usitedevices->count() > 1) {
 			$type = "site";
 			$name = $this->get_sitecode();
 		} else {
@@ -87,7 +109,7 @@ class State extends Model
 			$name = $this->name;
 		}
 		//Create an incident is it is a SITE, or a device that is still unresolved
-		if ($type == "site" || $this->resolved == 0)
+		if ($type == "site" || $type == "company" || $this->resolved == 0)
 		{
 			$incident = $this->create_incident($name, $type);
 			if($incident)
