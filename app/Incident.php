@@ -134,6 +134,7 @@ class Incident extends Model
 	
 	public function createLocationDescription()
 	{
+		$description = "";
 		if($this->type != "company")
 		{
 			$location = $this->get_location();
