@@ -250,7 +250,7 @@ class Incident extends Model
 			$this->save();
 			$ticket->urgency = $this->getUrgency();
 			$ticket->impact = 2;
-			$ticket->assigned_to = "";
+			//$ticket->assigned_to = "";
 			$ticket->state=2;
 			$ticket->save();
 			if(Utility::isAfterHours())
