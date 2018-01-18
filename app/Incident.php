@@ -151,7 +151,7 @@ class Incident extends Model
 				if($contact)
 				{
 					$description .= "*****************************************************\n";
-					$description .= "Site Contact: \nName: " . $contact->name . "\nPhone: " . $contact->phone . "\n";			
+					$description .= "Site Contact: \nName: " . $contact->name . "\nPhone: " . $contact->phone . "\nMobile: " . $contact->mobile_phone . "\n";			
 				}
 				$description .= "*****************************************************\n";
 				$description .= "Site Priority: " . $location->getPriorityString() . "\n";
