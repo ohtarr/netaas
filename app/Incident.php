@@ -180,9 +180,9 @@ class Incident extends Model
 		$description = "";
         if($this->type == "company")
         {
-            $description .= "This is considered a COMPANY-WIDE outage due to more than " . env("COMPANY_OUTAGE_COUNT") . " SITES in an alert state in a short timeframe.  Any and all additional alerts that occur will be added to this incident until it is marked resolved.  Please determine the cause or possible cause of these sites alerting, resolve the issues, and mark this incident resolved as soon as possible.";
-			$description .= "After this incident is marked resolved, please review the final comment indicating what is still DOWN and manually create any incidents as needed to resolve those issues.";
-			$description .= "\n\n";
+            $description .= "This is considered a COMPANY-WIDE outage due to more than " . env("COMPANY_OUTAGE_COUNT") . " SITES in an alert state in a short timeframe.  Any and all additional alerts that occur will be added to this incident until it is marked resolved.  Please determine the cause or possible cause of these sites alerting, resolve the issues, and mark this incident resolved as soon as possible.\n\n";
+			$description .= "After this incident is marked resolved, please review the final comment indicating what is still DOWN and manually create any incidents as needed to resolve those issues.\n";
+			$description .= "\n";
         }
 		$description .= "The following STATES have generated alerts.  The UP/DOWN status below indicates the states status at the time of this ticket being created. \n\n";
 		$description .= $this->getStateStatus();
