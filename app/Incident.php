@@ -174,12 +174,17 @@ class Incident extends Model
 		}
 		return "";
 	}
-	
+
 	public function createTicketDescription()
 	{
 		$description = "";
-
-		$description .= "The following ALERTS have been received: \n\n";
+        if($this->type == "company")
+        {
+            $description .= "This is considered a COMPANY-WIDE outage due to more than " . env("COMPANY_OUTAGE_COUNT") . " SITES in an alert state in a short timeframe.  Any and all additional alerts that occur will be added to this incident until it is marked resolved.  Please determine the cause or possible cause of these sites alerting, resolve the issues, and mark this incident resolved as soon as possible.";
+			$description .= "After this incident is marked resolved, please review the final comment indicating what is still DOWN and manually create any incidents as needed to resolve those issues.";
+			$description .= "\n\n";
+        }
+		$description .= "The following STATES have generated alerts.  The UP/DOWN status below indicates the states status at the time of this ticket being created. \n\n";
 		$description .= $this->getStateStatus();
 		$description .= $this->createLocationDescription();
 		$description .= "*****************************************************\n";
@@ -201,8 +206,8 @@ class Incident extends Model
 		if($this->type == "device")
 		{
 			$summary = "ALERTS have been received for device " . strtoupper($this->name);
-		}	
-	
+		}
+
 		$description = $this->createTicketDescription();
 		print "Creating Ticket of type " . $this->type . "\n";
 		$ticket = ServiceNowIncident::create([
@@ -265,7 +270,7 @@ class Incident extends Model
 		}
 		return false;
 	}
-	
+
 	public function autoCloseTicket()
 	{
 		$ticket = $this->get_ticket();
@@ -276,18 +281,18 @@ class Incident extends Model
 		$ticket->close($msg);
 		$this->close();
 	}
-	
+
 	public function get_states()
 	{
 		return State::where('incident_id', $this->id)->get();
 	}
-	
+
 	public function getUniqueDeviceStates()
 	{
 		$states = $this->get_states();
 		return $states->groupBy('name');
 	}
-	
+
 	public function get_latest_state()
 	{
 		$states = $this->get_states();
@@ -301,7 +306,7 @@ class Incident extends Model
 		}
 		return $neweststate;
 	}
-	
+
 	public function updateTicket()
 	{
 		$msg = "";
@@ -486,8 +491,8 @@ class Incident extends Model
 			}
 		//IF THERE IS NO SNOW TICKET
 		} else {
-			//IF TYPE IS SITE OR THERE ARE UNRESOLVED STATES
-			if($this->type == "site" || $unstates->isNotEmpty())
+			//IF TYPE IS SITE OR COMPANY OR THERE ARE UNRESOLVED STATES
+			if($this->type == "site" || $this->type == "company" || $unstates->isNotEmpty())
 			{
 				//Create a new snow ticket
 				print $this->name . " Creating a SNOW ticket!\n";
