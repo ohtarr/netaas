@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Event;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class EventsController extends Controller
 {
@@ -37,6 +38,9 @@ class EventsController extends Controller
 
 	public function Netmon(Request $request)
 	{
+		$message = "Received new request from " . $request->ip() . ":\n";
+		$message .= $request;
+		Log::info($message);
 		$event = new Event;
 		$event->src_ip = $request->ip();
 		$event->src_type = "netmon";
