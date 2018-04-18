@@ -118,9 +118,9 @@ class Incident extends Model
 				$description .= $state->entity_name . "\t";
 				if($state->resolved == 0)
 				{
-					$description .= "DOWN\t";
+					$description .= "ALERT\t";
 				} else {
-					$description .= "UP\t";
+					$description .= "RECOVER\t";
 				}
 				$description .= $state->entity_desc . "\n";
 			}
