@@ -64,9 +64,11 @@ class processStates extends Command
 				} else {
 					print "No incident found.\n";
 					$ustates = $state->getUnassignedUniqueDeviceSiteStates();
-					if($ustates->count() > 1 || $state->resolved == 0)
+					//if($ustates->count() > 1 || $state->resolved == 0)
+					if($state->resolved == 0)
 					{
-						print "Multiple devices from site or state is not resolved\n";
+						//print "Multiple devices from site or state is not resolved\n";
+						print "State is not resolved\n";
 						if($state->updated_at < Carbon::now()->subMinutes(env('TIMER_STATE_SAMPLING_DELAY')))
 						{
 							print "Sample time expired, creating incident!\n";
