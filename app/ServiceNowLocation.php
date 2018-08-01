@@ -61,7 +61,7 @@ class ServiceNowLocation extends ServiceNowModel
 
 	public function getOpengear()
 	{
-		$host = $this->name . "oob01";
+		$host = $this->name . "oob01." . env('FQDN');
 		$ip = gethostbyname($host);
 		if (filter_var($ip, FILTER_VALIDATE_IP)) {
 			$ping = new Ping($host);
