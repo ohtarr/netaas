@@ -86,4 +86,143 @@ class processStates extends Command
 		}
 	}
 
+
+	public static function processExistingDevice()
+	{
+		$states = State::whereNull("incident_id")->get();
+		if($states->isNotEmpty())
+		{
+			foreach($states as $state)
+			{
+				print "Processing STATE " . $state->name . "\n";
+				$state = $state->fresh();
+				$deviceincident = Incident::where('name',$state->name)->first();
+				if($deviceincident->isNotEmpty())
+				{
+					$state->incident_id = $deviceincident->id;
+					$state->save();
+				}
+			}
+		}	
+	}
+
+	public static function processExistingSite()
+	{
+		$states = State::whereNull("incident_id")->get();
+		if($states->isNotEmpty())
+		{
+			foreach($states as $state)
+			{
+				print "Processing STATE " . $state->name . "\n";
+				$state = $state->fresh();
+				$siteincident = Incident::where('type', "site")->where('name', $state->get_sitecode())->first()
+
+				if($siteincident->isNotEmpty())
+				{
+					$state->incident_id = $siteincident->id;
+					$state->save();
+				}
+			}
+		}	
+	}
+
+	public static function processExistingCompany()
+	{
+		$states = State::whereNull("incident_id")->get();
+		if($states->isNotEmpty())
+		{
+			foreach($states as $state)
+			{
+				print "Processing STATE " . $state->name . "\n";
+				$state = $state->fresh();
+				$companyincident = Incident::where('type','company')->first();
+				if($companyincident->isNotEmpty())
+				{
+					$state->incident_id = $companyincident->id;
+					$state->save();
+				}
+			}
+		}	
+	}
+
+	public static function processNewCompany()
+	{
+		$sites = State::getAllUnassignedSites();
+		if(count($sites) > env("COMPANY_OUTAGE_COUNT"))
+		{
+			$newinc = Incident::create([
+				'name'		=>	"company",
+				'type'		=>	"company",
+			]);
+			$allUnassignedStates = State::whereNull("incident_id")->get();
+			foreach($allUnassignedStates as $state)
+			{
+				$state->incident_id = $newinc->id;
+				$state->save();
+			}
+		}
+	}
+
+	public static function processNewSite()
+	{
+		$allUnassignedStates = State::whereNull("incident_id")->get();
+		foreach($allUnassignedStates as $state)
+		{
+			$siteStates = $state->getUnassignedUniqueDeviceSiteStates();
+			if($siteStates->count() > 1) {
+				$newinc = Incident::create([
+					'name'		=>	$state->get_sitecode(),
+					'type'		=>	"site",
+				]);
+				foreach($siteStates as $sitestate)
+				{
+					$sitestate->incident_id = $newinc->id;
+					$sitestate->save();
+				}
+			}
+		}	
+	}
+
+	public static function processNewNetworkDevice()
+	{
+		$allUnassignedStates = State::whereNull("incident_id")->get();
+		foreach($allUnassignedStates as $state)
+		{
+			$siteStates = $state->getUnassignedUniqueDeviceSiteStates();
+			if($siteStates->count() == 0) {
+				$newinc = Incident::create([
+					'name'		=>	$state->name,
+					'type'		=>	"network_device",
+				]);
+				$state->incident_id = $newinc->id;
+				$state->save();
+			}
+		}	
+	}
+
+	public static function processNewServerMultiple()
+	{
+		$allUnassignedStates = State::whereNull("incident_id")->get();
+		foreach($allUnassignedStates as $state)
+		{
+			$siteStates = $state->getUnassignedUniqueDeviceSiteStates();
+			if($siteStates->count() > 1) {
+				$newinc = Incident::create([
+					'name'		=>	$state->get_sitecode(),
+					'type'		=>	"site",
+				]);
+				foreach($siteStates as $sitestate)
+				{
+					$sitestate->incident_id = $newinc->id;
+					$sitestate->save();
+				}
+			}
+		}	
+	}
+
+	public static function processNewServerSingle()
+	{
+
+	}
+
 }
