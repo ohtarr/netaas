@@ -50,23 +50,20 @@ class processEvents extends Command
 		
 		foreach($events as $event)
 		{
-			print "Processing EVENT " . $event->name . "\n";
+			print "Processing EVENT FOR DEVICE " . $event->device_name . "\n";
 			$state = $event->get_state();
 			if($state)
 			{
-				print "State " . $state->name . " found, updating State.\n";
-				$state->resolved = $event->resolved;
-				$state->processed = 0;
-				$state->save();
+                print "State " . $state->device_name . " found, updating State.\n";
+                $state = $event->update_state();
 			} else {
 				print "No State found.  Creating a new State.\n";
-				$state = $event->create_state();
+                $state = $event->create_state();
 			}
 			if($state)
 			{
 				print "Flagging Event processed.\n";
-				$event->processed = 1;
-				$event->save();
+                $event->mark_processed();
 			}
 		}
 	}

@@ -43,79 +43,41 @@ class EventsController extends Controller
 		Log::info($message);
 		$event = new Event;
 		$event->src_ip = $request->ip();
-		$event->src_type = "netmon";
-		$event->name = $request['DEVICE_HOSTNAME'];
-
-		$event->type = $request['ENTITY_TYPE'];
+		$event->device_name = $request['DEVICE_HOSTNAME'];
+		$event->type = "NETWORK";
 		if($request['ALERT_STATE'] == "ALERT")
 		{
 			$event->resolved = 0;		
 		} else {
 			$event->resolved = 1;
 		}
-
-		$event->title = $request['TITLE'];
-		$event->message = $request['ALERT_MESSAGE'];
-		$event->timestamp = $request['TIMESTAMP'];
-
+		$event->entity_type = $request['ENTITY_TYPE'];
 		$event->entity_name = $request['ENTITY_NAME'];
 		$event->entity_desc = $request['ENTITY_DESCRIPTION'];
 
-		$array = [
-		'ALERT_URL'			=>	$request['ALERT_URL'],
-		'DURATION'			=>	$request['DURATION'],
-		'DEVICE_LINK'		=>	$request['DEVICE_LINK'],
-		'DEVICE_HARDWARE'	=>	$request['DEVICE_HARDWARE'],
-		'DEVICE_OS'			=>	$request['DEVICE_OS'],
-		'DEVICE_LOCATION'	=>	$request['DEVICE_LOCATION'],
-		'DEVICE_UPTIME'		=>	$request['DEVICE_UPTIME'],
-		'ENTITY_LINK'		=>	$request['ENTITY_LINK'],
-		];
-
-		$event->options = json_encode($array);
-
 		$event->save();
+		return response()->json($event);
 	}
 
-        public function Scom(Request $request)
-        {
-                $message = "Received new request from " . $request->ip() . ":\n";
-                $message .= $request;
-                Log::info($message);
-                $event = new Event;
-                $event->src_ip = $request->ip();
-                $event->src_type = "scom";
-                $event->name = $request['DEVICE_HOSTNAME'];
-
-                $event->type = "device";
-                if($request['ALERT_STATE'] == "0")
-                {
-                        $event->resolved = 0;
-                } elseif($request['ALERT_STATE'] == "255") {
-                        $event->resolved = 1;
-                }
-
-                $event->title = $request['TITLE'];
-                $event->message = $request['ALERT_MESSAGE'];
-                $event->timestamp = $request['ALERT_TIMESTAMP'];
-
-                //$event->entity_name = $request['ENTITY_NAME'];
-                //$event->entity_desc = $request['ENTITY_DESCRIPTION'];
-
-                $array = [
-                //'ALERT_URL'                     =>      $request['ALERT_URL'],
-                //'DURATION'                      =>      $request['DURATION'],
-                'DEVICE_LINK'           =>      $request['DEVICE_LINK'],
-                //'DEVICE_HARDWARE'       =>      $request['DEVICE_HARDWARE'],
-                //'DEVICE_OS'                     =>      $request['DEVICE_OS'],
-                //'DEVICE_LOCATION'       =>      $request['DEVICE_LOCATION'],
-                //'DEVICE_UPTIME'         =>      $request['DEVICE_UPTIME'],
-                //'ENTITY_LINK'           =>      $request['ENTITY_LINK'],
-                ];
-
-                $event->options = json_encode($array);
-
-                $event->save();
-        }
-
+	public function Scom(Request $request)
+	{
+		$message = "Received new request from " . $request->ip() . ":\n";
+		$message .= $request;
+		Log::info($message);
+		$event = new Event;
+		$event->src_ip = $request->ip();
+		$event->device_name = $request['DEVICE_HOSTNAME'];
+		$event->type = "SERVER";
+		if($request['ALERT_STATE'] == "0")
+		{
+				$event->resolved = 0;
+		} elseif($request['ALERT_STATE'] == "255") {
+				$event->resolved = 1;
+		}
+		$event->entity_type = $request['ENTITY_TYPE'];
+		$event->entity_name = $request['ENTITY_NAME'];
+		$event->entity_desc = $request['ENTITY_DESCRIPTION'];
+		$event->save();
+		return $event;
+	}
 }

@@ -32,11 +32,9 @@
 	<tr>
 		<th>ID</th>
 		<th>NAME</th>
-		<th>TYPE</th>
+		<th>TYPE_ID</th>
 		<th>RESOLVED</th>
 		<th>TICKET</th>
-		<th>CALLED_ONCALL</th>
-		<th>CALLED_SUP</th>
 		<th>LAST_OPENED</th>
 		<th>CREATED_AT</th>
 		<th>UPDATED_AT</th>
@@ -46,11 +44,9 @@
 		<tr>
 			<td>{{ $incident->id }}</td>
 			<td>{{ $incident->name }}</td>
-			<td>{{ $incident->type }}</td>
+			<td>{{ $incident->type_id }}</td>
 			<td>{{ $incident->resolved }}</td>
 			<td>{{ $incident->ticket }}</td>
-			<td>{{ $incident->called_oncall }}</td>
-			<td>{{ $incident->called_sup }}</td>
 			<td>{{ $incident->last_opened }}</td>
 			<td>{{ $incident->created_at }}</td>
 			<td>{{ $incident->updated_at }}</td>

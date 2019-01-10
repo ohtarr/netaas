@@ -14,7 +14,7 @@ use GuzzleHttp\Client as GuzzleHttpClient;
 class Incident extends Model
 {
 	use SoftDeletes;
-	protected $fillable = ['name','type'];
+	protected $fillable = ['name','type_id'];
 
 	protected $dates = [
         'created_at',
@@ -129,6 +129,73 @@ class Incident extends Model
 		return $description;
 	}
 	
+	public function compileString($string)
+	{
+		$location = $this->get_location();
+		if($location)
+		{
+			$contact = $location->getContact();
+			$contactdesc = "Site Contact: \nName: " . $contact->name . "\nPhone: " . $contact->phone . "\nMobile: " . $contact->mobile_phone . "\nEmail: " . $contact->email . "\n";
+			$weather = $location->getWeather();
+			$opengear = $location->getOpengear();
+			if(!$opengear)
+			{
+				$opengear = "NO OPENGEAR FOUND";
+			}
+			$locdesc = "";
+			$locdesc .= "SITE NAME: " . $location->name . "\n\n";
+			$locdesc .= "Display Name: " . $location->u_display_name . "\n\n";
+			$locdesc .= "Description: " . $location->description . "\n\n";
+			$locdesc .= "Address: " . $location->street . ", " . $location->city . ", " . $location->state . ", " . $location->zip . "\n\n";
+			$locdesc .= "Comments: \n" . $location->u_comments . "\n\n";
+			$priority = $location->getPriorityString();
+		} else {
+			$contactdesc = "NO VALID LOCATION";
+			$weather = "NO VALID LOCATION";
+			$opengear = "NO VALID LOCATION";
+			$locdesc = "NO VALID LOCATION";
+			$priority = "NO VALID LOCATION";
+		}
+		$result = $string;
+		$result = preg_replace('/{{name}}/', $this->name, $result);
+		$result = preg_replace('/{{state_summary}}/', $this->compileStateSummary(), $result);
+		$result = preg_replace('/{{count_states}}/', $this->get_states()->count(), $result);
+		$result = preg_replace('/{{count_devices}}/', $this->getUniqueDeviceStates()->count(), $result);
+		$result = preg_replace('/{{contact}}/', $contactdesc, $result);
+		$result = preg_replace('/{{weather}}/', $weather, $result);
+		$result = preg_replace('/{{opengear}}/', $opengear, $result);
+		$result = preg_replace('/{{location}}/', $locdesc, $result);
+		$result = preg_replace('/{{priority}}/', $priority, $result);
+		$result = preg_replace('/{{timestamp}}/', Carbon::now()->toDateTimeString(), $result);
+		//$result = preg_replace('/{{incident_type}/', IncidentType::find($this->incident_type_id)->name, $result);
+		$result = preg_replace('/{{company_threshold}}/', env('COMPANY_OUTAGE_COUNT'), $result);
+		return $result;
+	}
+
+	public function compileStateSummary()
+	{
+		$description = "";
+		foreach($this->getUniqueDeviceStates() as $name => $device)
+		{
+			$description .= "DEVICE " . $name . ":\n";
+			foreach($device as $state)
+			{
+				if($state->resolved == 0)
+				{
+					$description .= "ALERT\t";
+				} else {
+					$description .= "RECOVER\t";
+				}
+				$description .= $state->type . "\t";
+				$description .= $state->entity_type . "\t";
+				$description .= $state->entity_name . "\t";
+				$description .= $state->entity_desc . "\n";
+			}
+			$description .= "\n";
+		}
+		return $description;
+	}
+
 	public function createLocationDescription()
 	{
 		$description = "";
@@ -267,7 +334,7 @@ class Incident extends Model
 	public function getUniqueDeviceStates()
 	{
 		$states = $this->get_states();
-		return $states->groupBy('name');
+		return $states->groupBy('device_name');
 	}
 
 	public function get_latest_state()
