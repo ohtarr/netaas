@@ -5,6 +5,7 @@ namespace App;
 use ohtarr\ServiceNowModel;
 use GuzzleHttp\Client as GuzzleHttpClient;
 use JJG\Ping as Ping;
+use App\ServiceNowUser;
 
 class ServiceNowLocation extends ServiceNowModel
 {

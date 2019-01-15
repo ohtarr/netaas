@@ -20,8 +20,29 @@ class Incident extends Model
         'created_at',
         'updated_at',
         'deleted_at',
-    ];
+	];
+	
+	public $location = null;
 
+	public function states()
+	{
+		return $this->hasMany('App\State');
+	}
+
+	public function incidentType()
+	{
+        return $this->hasOne('App\IncidentType','id','type_id');		
+	}
+
+	public function ticket()
+    {
+		if(!$this->ticket)
+		{
+			return null;
+		}
+		return ServiceNowIncident::find($this->ticket_id);
+	}
+	
 	//close this incident
 	public function close()
 	{
@@ -55,7 +76,7 @@ class Incident extends Model
 		$this->purgeStates();
 		$this->delete();
 	}
-		
+/*
 	public function getUrgency()
 	{
 		$location = $this->get_location();
@@ -79,7 +100,7 @@ class Incident extends Model
 		}
 		return $urgency;
 	}
-	
+
 	public function getImpact()
 	{
 		if($this->type == "company")
@@ -89,21 +110,25 @@ class Incident extends Model
 			return 2;
 		}	
 	}
-	
+/**/	
 	public function get_location()
 	{
-		//grab the first 8 characters of our name.  This is our sitecode!
-		$sitecode = strtoupper(substr($this->name,0,8));
-		$location = null;
-		try
+		if(!$this->location)
 		{
-			$location = ServiceNowLocation::where("name","=",$sitecode)->first();
-		} catch(\Exception $e) {
-		
+			//grab the first 8 characters of our name.  This is our sitecode!
+			$sitecode = strtoupper(substr($this->name,0,8));
+			$location = null;
+			try
+			{
+				$location = ServiceNowLocation::where("name","=",$sitecode)->first();
+			} catch(\Exception $e) {
+			
+			}
+			$this->location = $location;
 		}
-		return $location;
+		return $this->location;
 	}
-
+/*
 	public function getStateStatus()
 	{
 		$description = "";
@@ -128,7 +153,7 @@ class Incident extends Model
 		}
 		return $description;
 	}
-	
+/**/	
 	public function compileString($string)
 	{
 		$location = $this->get_location();
@@ -182,9 +207,9 @@ class Incident extends Model
 			{
 				if($state->resolved == 0)
 				{
-					$description .= "ALERT\t";
+					$description .= "-ALERT\t";
 				} else {
-					$description .= "RECOVER\t";
+					$description .= "-RECOVER\t";
 				}
 				$description .= $state->type . "\t";
 				$description .= $state->entity_type . "\t";
@@ -195,7 +220,7 @@ class Incident extends Model
 		}
 		return $description;
 	}
-
+/*
 	public function createLocationDescription()
 	{
 		$description = "";
@@ -249,44 +274,29 @@ class Incident extends Model
 			$description .= "\n";
         }
 		$description .= "The following STATES have generated alerts.  The UP/DOWN status below indicates the states status at the time of this ticket being created. \n\n";
-		$description .= $this->getStateStatus();
+		$description .= $this->compileStateSummary();
 		$description .= $this->createLocationDescription();
 		$description .= "*****************************************************\n";
 		return $description;
 	}
-
+/**/
 	public function createTicket()
 	{
-		$urgency = $this->getUrgency();
-		$impact = $this->getImpact();
-		if($this->type == "company")
-		{
-			$summary = "ALERTS have been received for more than " . env("COMPANY_OUTAGE_COUNT") . " locations!";
-		}
-		if($this->type == "site")
-		{
-			$summary = "ALERTS have been received for MULTIPLE devices at site " . strtoupper($this->name);
-		}
-		if($this->type == "device")
-		{
-			$summary = "ALERTS have been received for device " . strtoupper($this->name);
-		}
 
-		$description = $this->createTicketDescription();
-		print "Creating Ticket of type " . $this->type . "\n";
+		print "Creating Ticket of type " . $this->IncidentType->name . "\n";
 		$ticket = ServiceNowIncident::create([
-			"cmdb_ci"			=>	env('SNOW_cmdb_ci'),
-			"impact"			=>	$impact,
-			"urgency"			=>	$urgency,
-			"short_description"	=>	$summary,
-			"description"		=>	$description,
+			"cmdb_ci"			=>	$this->IncidentType->ci_id,
+			"impact"			=>	$this->IncidentType->impact,
+			"urgency"			=>	$this->IncidentType->urgency,
+			"short_description"	=>	$this->compileString($this->IncidentType->summary),
+			"description"		=>	$this->compileString($this->IncidentType->description),
 			"assigned_to"		=>	"",
-			"caller_id"			=>	env('SNOW_caller_id'),
-			"assignment_group"	=>	env('SNOW_assignment_group'),
+			"caller_id"			=>	$this->IncidentType->caller_id,
+			"assignment_group"	=>	$this->IncidentType->group_id,
 		]);
 		if($ticket)
 		{
-			$this->ticket = $ticket->sys_id;
+			$this->ticket_id = $ticket->sys_id;
 			$this->save();
 			return $ticket;
 		}
@@ -300,13 +310,13 @@ class Incident extends Model
 		if($ticket)
 		{
 			$msg = "The following ALERTS have been received: \n";
-			$msg .= $this->getStateStatus();
+			$msg .= $this->compileStateSummary();
 			$msg .= "\nReopening the ticket!";
 			$ticket->add_comment($msg);
 			$this->resolved = 0;
 			$this->save();
-			$ticket->urgency = $this->getUrgency();
-			$ticket->impact = 2;
+			$ticket->urgency = $this->IncidentType->urgency;
+			$ticket->impact = $this->IncidentType->impact;
 			//$ticket->assigned_to = "";
 			$ticket->state=2;
 			$ticket->save();
@@ -354,10 +364,11 @@ class Incident extends Model
 	public function updateTicket()
 	{
 		$msg = "";
-		if($ticket = $this->get_ticket())
+		$ticket = $this->get_ticket();
+		if($ticket)
 		{
 			$msg.= "State update detected.  Current status:\n";
-			$msg .= $this->getStateStatus();
+			$msg .= $this->compileStateSummary();
 			$ticket->add_comment($msg);
 			return 1;
 		}
@@ -381,16 +392,17 @@ class Incident extends Model
 
 	public function get_ticket()
 	{
-		if ($this->ticket)
+		if(!$this->ticket_id)
 		{
-			if($ticket = ServiceNowIncident::where("sys_id","=",$this->ticket)->first())
-			{
-				return $ticket;
-			}
+			return null;
 		}
-		return null;
+		if($ticket = ServiceNowIncident::where("sys_id","=",$this->ticket_id)->first())
+		{
+			return $ticket;
+		}
 	}
 
+	/*
 	public function process()
 	{
 		//Fetch me our ticket
@@ -477,4 +489,5 @@ class Incident extends Model
 			}
 		}
 	}
+	/**/
 }

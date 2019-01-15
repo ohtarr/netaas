@@ -15,7 +15,9 @@ class ModifyIncidentTable extends Migration
     {
         Schema::table('incidents', function (Blueprint $table) {
             $table->dropColumn('type');
+            $table->dropColumn('ticket');
             $table->integer('type_id')->after('name');
+            $table->string('ticket_id')->nullable()->after('resolved');
         });
 
     }

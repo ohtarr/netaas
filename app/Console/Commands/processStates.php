@@ -5,8 +5,8 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use App\State;
 use App\Incident;
-use Carbon\Carbon;
 use App\IncidentType;
+use Carbon\Carbon;
 
 class processStates extends Command
 {
@@ -48,6 +48,7 @@ class processStates extends Command
 		$this->processNewSite();
 		$this->processNewDeviceNetwork();
 		$this->processNewDeviceServer();
+		$this->processStale();
 	}
 
 	public static function processExistingDevice()
@@ -173,11 +174,6 @@ class processStates extends Command
 			$state->refresh();
 			$location = $state->get_location();
 			print "State " . $state->device_name . "\n";
-			//print_r($location);
-			//if(!$location)
-			//{
-			//	continue;
-			//}
 			if($location)
 			{
 				if($location->u_priority == 2)
@@ -191,9 +187,8 @@ class processStates extends Command
 			{
 				return;
 			}
-			//print_r($inctype);
 			$siteStates = $state->getUnassignedUniqueDeviceSiteStates();
-			print_r($siteStates);
+
 			if($siteStates->count() > 1)
 			{
 				$newinc = Incident::create([
@@ -226,7 +221,7 @@ class processStates extends Command
 				return;
 			}
 			$siteStates = $state->getUnassignedUniqueDeviceSiteStates();
-			if($siteStates->count() <= 1)
+			if($siteStates->count() == 1 && $siteStates->first()->first()->resolved == 0)
 			{
 				$newinc = Incident::create([
 					'name'		=>	$state->device_name,
@@ -275,4 +270,14 @@ class processStates extends Command
 			}
 		}
 	}
+	public static function processStale()
+	{
+		$states = State::whereNull("incident_id")->where('resolved',1)->where('updated_at',"<",Carbon::now()->subMinutes(env('TIMER_DELETE_STALE_STATES')))->get();
+		foreach($states as $state)
+		{
+			$state->refresh();
+			$state->delete();
+		}
+	}
+
 }

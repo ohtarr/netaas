@@ -18,10 +18,13 @@ class CreateIncidentTypesTable extends Migration
             $table->string('name');
             $table->string('summary',255);
             $table->string('description',10000);
-            $table->string('group');
-            $table->string('ci');
+            $table->string('group_id');
+            $table->string('ci_id');
+            $table->string('caller_id');
             $table->integer('impact');
             $table->integer('urgency');
+            $table->integer('autoresolve');
+            $table->integer('ticketrelease');
             $table->timestamps();
             $table->softDeletes();
         });
