@@ -8,6 +8,7 @@ use App\Ticket;
 use App\State;
 use App\ServiceNowIncident;
 use App\ServiceNowLocation;
+use App\ServiceNowServer;
 use Carbon\Carbon;
 use GuzzleHttp\Client as GuzzleHttpClient;
 use App\IncidentType;
@@ -195,6 +196,7 @@ class Incident extends Model
 		$result = preg_replace('/{{timestamp}}/', Carbon::now()->toDateTimeString(), $result);
 		//$result = preg_replace('/{{incident_type}/', IncidentType::find($this->incident_type_id)->name, $result);
 		$result = preg_replace('/{{company_threshold}}/', env('COMPANY_OUTAGE_COUNT'), $result);
+		$result = preg_replace('/{{server_desc}}/', ServiceNowServer::where('name',$this->name)->first()->short_description, $result);
 		return $result;
 	}
 
@@ -225,7 +227,7 @@ class Incident extends Model
 				}
 				$description .= "\n";
 			}
-			$description .= "\n";
+			//$description .= "\n";
 		}
 		return $description;
 	}
