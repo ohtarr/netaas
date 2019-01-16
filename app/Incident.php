@@ -10,6 +10,7 @@ use App\ServiceNowIncident;
 use App\ServiceNowLocation;
 use Carbon\Carbon;
 use GuzzleHttp\Client as GuzzleHttpClient;
+use App\IncidentType;
 
 class Incident extends Model
 {
@@ -490,4 +491,9 @@ class Incident extends Model
 		}
 	}
 	/**/
+	public static function getIncidentsOfType($type)
+	{
+		$IncidentType = IncidentType::where('name',$type)->first();
+		return Incident::where('type_id',$IncidentType->id)->get();
+	}
 }

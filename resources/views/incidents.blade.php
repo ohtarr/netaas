@@ -35,7 +35,6 @@
 		<th>TYPE_ID</th>
 		<th>RESOLVED</th>
 		<th>TICKET_ID</th>
-		<th>LAST_OPENED</th>
 		<th>CREATED_AT</th>
 		<th>UPDATED_AT</th>
 		<th>DELETED_AT</th>
@@ -47,7 +46,6 @@
 			<td>{{ $incident->type_id }}</td>
 			<td>{{ $incident->resolved }}</td>
 			<td>{{ $incident->ticket_id }}</td>
-			<td>{{ $incident->last_opened }}</td>
 			<td>{{ $incident->created_at }}</td>
 			<td>{{ $incident->updated_at }}</td>
 			<td>{{ $incident->deleted_at }}</td>
