@@ -173,7 +173,7 @@ class Incident extends Model
 			$locdesc .= "Display Name: " . $location->u_display_name . "\n\n";
 			$locdesc .= "Description: " . $location->description . "\n\n";
 			$locdesc .= "Address: " . $location->street . ", " . $location->city . ", " . $location->state . ", " . $location->zip . "\n\n";
-			$locdesc .= "Comments: \n" . $location->u_comments . "\n\n";
+			$locdesc .= "Comments: \n" . $location->u_comments . "\n";
 			$priority = $location->getPriorityString();
 		} else {
 			$contactdesc = "NO VALID LOCATION";
@@ -198,29 +198,70 @@ class Incident extends Model
 		return $result;
 	}
 
-	public function compileStateSummary()
+ 	public function compileStateSummary()
 	{
 		$description = "";
 		foreach($this->getUniqueDeviceStates() as $name => $device)
 		{
-			$description .= "DEVICE " . $name . ":\n";
+			$description .= "[" . $name . "]\n";
 			foreach($device as $state)
 			{
 				if($state->resolved == 0)
 				{
-					$description .= "-ALERT\t";
+					$description .= "---[ALERT]";
 				} else {
-					$description .= "-RECOVER\t";
+					$description .= "+++[RECOVER]";
 				}
-				$description .= $state->type . "\t";
-				$description .= $state->entity_type . "\t";
-				$description .= $state->entity_name . "\t";
-				$description .= $state->entity_desc . "\n";
+				$description .= " [" . Carbon::parse($state->updated_at)->Format('m/d g:i A') . "]";
+				$description .= " [" . $state->type . "]";
+				$description .= " [" . $state->entity_type . "]";
+				if($state->entity_name)
+				{
+					$description .= " [" . $state->entity_name . "]";
+				}
+				if($state->entity_desc)
+				{
+					$description .= " [" . $state->entity_desc . "]";
+				}
+				$description .= "\n";
 			}
 			$description .= "\n";
 		}
 		return $description;
 	}
+
+	/* public function compileStateSummary()
+	{
+		$description = "";
+		foreach($this->getUniqueDeviceStates() as $name => $device)
+		{
+			$description .= "### DEVICE " . $name . " ###\n";
+			foreach($device as $state)
+			{
+				if($state->resolved == 0)
+				{
+					$description .= "  [ALERT]\t";
+				} else {
+					$description .= "  [RECOVER]\t";
+				}
+				$description .= "" . Carbon::parse($state->updated_at)->Format('m/d g:i A') . "\t";
+				$description .= "" . $state->type . "\t";
+				$description .= "" . $state->entity_type . "\t";
+				if($state->entity_name)
+				{
+					$description .= "" . $state->entity_name . "\t";
+				}
+				if($state->entity_desc)
+				{
+					$description .= "" . $state->entity_desc . "\t";
+				}
+				$description .= "\n";
+			}
+			$description .= "\n";
+		}
+		return $description;
+	} */
+
 /*
 	public function createLocationDescription()
 	{
