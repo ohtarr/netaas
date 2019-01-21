@@ -312,13 +312,19 @@ class processStates extends Command
 		{
 			$state->refresh();
 			//Find the correct incidentType.  If not found, exit function.
-			if($state->type == "NETWORK")
-			{
-				$type = "DEVICE_NETWORK_LOW";
-			}
-			if($state->type == "SERVER")
-			{
+			switch ($state->type) {
+				case "NETWORK":
+					$type = "DEVICE_NETWORK_LOW";
+					break;
+				case "SERVER_WINDOWS":
+					$type = "DEVICE_SERVER_MEDIUM";
+					break;
+				case "SERVER_NASUNI":
 				$type = "DEVICE_SERVER_MEDIUM";
+					break;
+				case "SERVER_ESXI":
+				$type = "DEVICE_SERVER_MEDIUM";
+					break;
 			}
 			$inctype = IncidentType::where("name",$type)->first();
 			if(!$inctype)
