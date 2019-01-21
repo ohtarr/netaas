@@ -233,12 +233,12 @@ class processIncidents extends Command
             //IF THERE IS NO SNOW TICKET
             } else {
                 //IF TYPE IS SITE OR COMPANY OR THERE ARE UNRESOLVED STATES
-                if($incident->incidentType->name == "SITE_HIGH" || $incident->incidentType->name == "COMPANY_CRITICAL" || $unstates->isNotEmpty())
-                {
+                //if($incident->incidentType->name == "SITE_HIGH" || $incident->incidentType->name == "COMPANY_CRITICAL" || $unstates->isNotEmpty())
+                //{
                     //Create a new snow ticket
-                    print $incident->name . " Creating a SNOW ticket!\n";
+                    print $incident->name . "Creating a SNOW ticket!\n";
                     $incident->createTicket();
-                }
+                //}
             }
         }
     }

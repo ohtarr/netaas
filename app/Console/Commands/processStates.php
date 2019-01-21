@@ -189,16 +189,16 @@ class processStates extends Command
 			$state->refresh();
 			//Get ServiceNowLocation for this state.
 			$location = $state->get_location();
+			//assume MEDIUM priority.
+			$inctype = IncidentType::where("name","SITE_MEDIUM")->first();
 			//If we have a valid location, get the priority of the site to determine incident priority.
-			//Otherwise assume MEDIUM priority.
+			//Overwrite inctype to SITE_HIGH if needed.
 			if($location)
 			{
 				if($location->u_priority == 2)
 				{
 					$inctype = IncidentType::where("name","SITE_HIGH")->first();
 				}
-			} else {
-				$inctype = IncidentType::where("name","SITE_MEDIUM")->first();
 			}
 			//If we can't find the proper IncidentType, exit the function.
 			if(!$inctype)
@@ -230,7 +230,7 @@ class processStates extends Command
 			}
 		}
 	}
-
+/* 
 	//Check if a new DEVICE_NETWORK incident needs to be created for a single network device.
 	public static function processNewDeviceNetwork()
 	{
@@ -301,7 +301,7 @@ class processStates extends Command
 			}
 		}
 	}
-
+ */
 	//Check if a new DEVICE_NETWORK incident needs to be created for a single network device.
 	public static function processNewDevice()
 	{

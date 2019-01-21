@@ -67,7 +67,12 @@ class EventsController extends Controller
 		$event = new Event;
 		$event->src_ip = $request->ip();
 		$event->device_name = $request['DEVICE_HOSTNAME'];
-		$event->type = "SERVER";
+		if($request['TYPE'])
+		{
+			$event->type = $request['TYPE'];
+		} else {
+			$event->type = "SERVER";
+		}
 		if($request['ALERT_STATE'] == "0")
 		{
 				$event->resolved = 0;
