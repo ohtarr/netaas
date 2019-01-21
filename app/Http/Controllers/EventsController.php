@@ -51,7 +51,7 @@ class EventsController extends Controller
 		} else {
 			$event->resolved = 1;
 		}
-		$event->entity_type = $request['ENTITY_TYPE'];
+		$event->entity_type = $request['ALERT_MESSAGE'];
 		$event->entity_name = $request['ENTITY_NAME'];
 		$event->entity_desc = $request['ENTITY_DESCRIPTION'];
 
