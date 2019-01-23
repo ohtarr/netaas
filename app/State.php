@@ -37,7 +37,7 @@ class State extends Model
 		//Return the sitecode!
 		return $location;
 	}
-	
+
 	/*
 	public function get_site_states()
 	{
@@ -67,10 +67,41 @@ class State extends Model
 		return $sites;
 	}
 /**/
-	public function getUnassignedUniqueDeviceSiteStates()
+	public static function getUnassignedStates()
+	{
+		return State::whereNull("incident_id")->get();
+	}
+
+	public static function getUnassignedStatesDelayed()
+	{
+		return State::whereNull("incident_id")->where('updated_at',"<",Carbon::now()->subMinutes(env('TIMER_STATE_SAMPLING_DELAY')))->get();
+	}
+
+	public static function getUnassignedResolvedStaleStates()
+	{
+		return State::whereNull("incident_id")->where('resolved',1)->where('updated_at',"<",Carbon::now()->subMinutes(env('TIMER_DELETE_STALE_STATES')))->get();
+	}
+
+/* 	public function getUnassignedSiteStatesPerDevice()
 	{
 		$states = State::where('device_name', 'like', '%' . $this->get_sitecode() . '%')->whereNull("incident_id")->get();
 		return $states->groupBy('device_name');
+	} */
+
+	public function getUnassignedSiteStatesPerDevice($type = null)
+	{
+		$query = State::where('device_name', 'like', '%' . $this->get_sitecode() . '%')->whereNull("incident_id");
+		if($type)
+		{
+			$query = $query->where("type",$type);
+		}
+		$states = $query->get();
+		return $states->groupBy('device_name');
+	}
+
+	public function getUnresolvedUnassignedSiteStates()
+	{
+		return State::where('device_name', 'like', '%' . $this->get_sitecode() . '%')->whereNull("incident_id")->where("resolved",0)->get();
 	}
 /*	
 	public function getUnresolvedUnassignedUniqueDeviceSiteStates()
@@ -111,7 +142,7 @@ class State extends Model
 	{
 		$sites = $this->getAllUnassignedSites();		
 		//$usitedevices = $this->get_unassigned_site_states()->groupBy('name');
-		$usitedevices = $this->getUnassignedUniqueDeviceSiteStates();
+		$usitedevices = $this->getUnassignedSiteStatesPerDevice();
 		//If there is more than 1 device with same site code in state table
 		if(count($sites) > env("COMPANY_OUTAGE_COUNT"))
 		{

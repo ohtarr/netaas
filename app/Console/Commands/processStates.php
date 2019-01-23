@@ -60,7 +60,7 @@ class processStates extends Command
 	{
 		print "Processing Existing Devices\n";
 		//Get all states that are not already assigned to an incident and foreach through them.
-		$states = State::whereNull("incident_id")->get();
+		$states = State::getUnassignedStates();
 		foreach($states as $state)
 		{
 			$state->refresh();  //Get a fresh copy from the database just in case a previous rule modified it.
@@ -86,7 +86,7 @@ class processStates extends Command
 	{
 		print "Processing Existing Sites\n";
 		//Find all unassigned states and Check if an existing site incident exists for it.
-		$states = State::whereNull("incident_id")->get();
+		$states = State::getUnassignedStates();
 		foreach($states as $state)
 		{
 			$state->refresh();
@@ -95,7 +95,7 @@ class processStates extends Command
 			if($siteincident)
 			{
 				//If a site incident exists already, find all states that match site name and assign them to the incident.
-				$sitestates = $state->getUnassignedUniqueDeviceSiteStates();
+				$sitestates = $state->getUnassignedSiteStatesPerDevice();
 				foreach($sitestates as $sitestate)
 				{
 					foreach($sitestate as $sitedevicestate)
@@ -114,7 +114,7 @@ class processStates extends Command
 	{
 		print "Processing Existing Company Outage\n";
 		//Find the incidentType for COMPANY_CRITICAL.  If it doesn't exist, exit function.
-		$inctype = IncidentType::where("name","COMPANY_CRITICAL")->first();
+		$inctype = IncidentType::getIncidentTypeByName("COMPANY_CRITICAL");
 		if(!$inctype)
 		{
 			return;
@@ -123,7 +123,7 @@ class processStates extends Command
 		$companyincident = Incident::where('type_id',$inctype->id)->first();
 		if($companyincident)
 		{
-			$states = State::whereNull("incident_id")->get();
+			$states = State::getUnassignedStates();
 			foreach($states as $state)
 			{
 				print "Adding state " . $state->device_name . " to company outage!!\n";
@@ -139,22 +139,21 @@ class processStates extends Command
 	{
 		print "Processing New Company Outage\n";
 		//Look for COMPANY_CRITICAL incidentType.  If it doesn't exist, exit the function.
-		$inctype = IncidentType::where("name","COMPANY_CRITICAL")->first();
-		$states = State::whereNull("incident_id")->where('updated_at',"<",Carbon::now()->subMinutes(env('TIMER_STATE_SAMPLING_DELAY')))->get();
+		$inctype = IncidentType::getIncidentTypeByName("COMPANY_CRITICAL");
+		$states = State::getUnassignedStatesDelayed();
 		if($states->isEmpty())
 		{
 			return;
 		}
 		//Get all unassigned states.
-		$states = State::whereNull("incident_id")->get();
-		$sites = [];  
+		$states = State::getUnassignedStates();
+		$sites = [];
 		$devices = $states->groupBy('device_name');
-		foreach($devices as $device)
+		//print_r($devices);
+		foreach($devices as $name => $device)
 		{
-			foreach($device as $entity)
-			{
-				$sites[] = substr($entity->device_name,0,8);  //List of SITES for each state.  Used to determine number of SITES currently in alarm state.
-			}
+			//List of SITES for each state.  Used to determine number of SITES currently in alarm state.
+			$sites[] = substr($name,0,8);
 		}
 		$sites = array_unique($sites);  //Remove duplicates to get an accurate site count.
 		//If the count of unassigned sites in alert state is larger than the configured COMPANY_OUTAGE_COUNT, create a company outage incident
@@ -183,21 +182,21 @@ class processStates extends Command
 	{
 		print "Processing New Sites\n";
 		//Get all states that are unassigned and older than TIMER_STATE_SAMPLING_DELAY
-		$states = State::whereNull("incident_id")->where('updated_at',"<",Carbon::now()->subMinutes(env('TIMER_STATE_SAMPLING_DELAY')))->get();
+		$states = State::getUnassignedStatesDelayed();
 		foreach($states as $state)
 		{
 			$state->refresh();
 			//Get ServiceNowLocation for this state.
 			$location = $state->get_location();
 			//assume MEDIUM priority.
-			$inctype = IncidentType::where("name","SITE_MEDIUM")->first();
+			$inctype = IncidentType::getIncidentTypeByName("SITE_MEDIUM");
 			//If we have a valid location, get the priority of the site to determine incident priority.
 			//Overwrite inctype to SITE_HIGH if needed.
 			if($location)
 			{
 				if($location->u_priority == 2)
 				{
-					$inctype = IncidentType::where("name","SITE_HIGH")->first();
+					$inctype = IncidentType::getIncidentTypeByName("SITE_HIGH");
 				}
 			}
 			//If we can't find the proper IncidentType, exit the function.
@@ -205,11 +204,13 @@ class processStates extends Command
 			{
 				return;
 			}
+			//Get all NETWORK states that match this states sitecode
+			$siteNetworkStates = $state->getUnassignedSiteStatesPerDevice("NETWORK");
 			//Get all unassigned states that match this states sitecode.
-			$siteStates = $state->getUnassignedUniqueDeviceSiteStates();
-
+			$allSiteStates = $state->getUnassignedSiteStatesPerDevice();
+			$unresolvedSiteStates = $state->getUnresolvedUnassignedSiteStates();
 			//If there is more than 1 state that match sitecode, create a SITE incident.
-			if($siteStates->count() > 1)
+			if($siteNetworkStates->count() > 1 && $unresolvedSiteStates->count() > 0)
 			{
 				print "Detected more than 1 alert state from site " . $state->get_sitecode() . ".  Creating a SITE outage\n"; 
 				$newinc = Incident::create([
@@ -217,7 +218,7 @@ class processStates extends Command
 					'type_id'	=>	$inctype->id,
 				]);
 				//Assign all states to this new incident.
-				foreach($siteStates as $sitestate)
+				foreach($allSiteStates as $sitestate)
 				{
 					foreach($sitestate as $sitedevicestate)
 					{
@@ -246,7 +247,7 @@ class processStates extends Command
 				return;
 			}
 			//Get all unassigned states that match this states sitecode.
-			$siteStates = $state->getUnassignedUniqueDeviceSiteStates();
+			$siteStates = $state->getUnassignedSiteStatesPerDevice();
 			//If there is only 1 device for this site AND it is not resolved, open a new device incident.
 			if($siteStates->count() == 1 && $siteStates->first()->where('resolved',0)->count() > 0)
 			{
@@ -281,7 +282,7 @@ class processStates extends Command
 				return;
 			}
 			//Get all unassigned states that match this states sitecode.
-			$siteStates = $state->getUnassignedUniqueDeviceSiteStates();
+			$siteStates = $state->getUnassignedSiteStatesPerDevice();
 			//If there is only 1 device for this site AND it is not resolved, open a new device incident.
 			if($siteStates->count() == 1 && $siteStates->first()->where('resolved',0)->count() > 0)
 			{
@@ -307,7 +308,7 @@ class processStates extends Command
 	{
 		print "Processing New Devices\n";
 		//Get all unassigned states that are older than the TIMER_STATE_SAMPLING_DELAY
-		$states = State::whereNull("incident_id")->where('updated_at',"<",Carbon::now()->subMinutes(env('TIMER_STATE_SAMPLING_DELAY')))->get();
+		$states = State::getUnassignedStatesDelayed();
 		foreach($states as $state)
 		{
 			$state->refresh();
@@ -326,23 +327,26 @@ class processStates extends Command
 				$type = "DEVICE_SERVER_MEDIUM";
 					break;
 			}
-			$inctype = IncidentType::where("name",$type)->first();
+			$inctype = IncidentType::getIncidentTypeByName($type);
 			if(!$inctype)
 			{
 				return;
 			}
 			//Get all unassigned states that match this states sitecode.
-			$siteStates = $state->getUnassignedUniqueDeviceSiteStates();
+			$siteStates = $state->getUnassignedSiteStatesPerDevice();
+			$unresolvedSiteStates = $state->getUnresolvedUnassignedSiteStates();
 			//If there is only 1 device for this site AND it is not resolved, open a new device incident.
-			if($siteStates->count() == 1 && $siteStates->first()->where('resolved',0)->count() > 0)
+			if($state->resolved == 0)
 			{
 				print "Found at least 1 alert state for device " . $state->device_name . ".  Creating a new Device incident\n";
 				$newinc = Incident::create([
 					'name'		=>	$state->device_name,
 					'type_id'	=>	$inctype->id,
 				]);
-				//Find all unassigned states with thie device name and assign them to new incident.
-				$devicestates = State::whereNull("incident_id")->where('device_name',$state->device_name)->get();
+				//Find all unassigned states with this device name and assign them to new incident.
+				//$devicestates = State::whereNull("incident_id")->where('device_name',$state->device_name)->get();
+				$devicestates = $siteStates->first();
+				//print_r($devicestates);
 				foreach($devicestates as $devicestate)
 				{
 					print "Adding alert state " . $devicestate->device_name . "to device incident\n";
@@ -358,7 +362,7 @@ class processStates extends Command
 	public static function processStale()
 	{
 		print "Processing Stale States\n";
-		$states = State::whereNull("incident_id")->where('resolved',1)->where('updated_at',"<",Carbon::now()->subMinutes(env('TIMER_DELETE_STALE_STATES')))->get();
+		$states = State::getUnassignedResolvedStaleStates();
 		foreach($states as $state)
 		{
 			print "Deleting stale alert state " . $state->device_name . ".\n";

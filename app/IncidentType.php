@@ -9,4 +9,8 @@ class IncidentType extends Model
 {
 	use SoftDeletes;
 
+	public static function getIncidentTypeByName($name)
+	{
+		return IncidentType::where("name",$name)->first();
+	}
 }
