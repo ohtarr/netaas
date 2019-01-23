@@ -76,7 +76,7 @@ class EventsController extends Controller
 		if($request['ALERT_STATE'] == "0")
 		{
 				$event->resolved = 0;
-		} elseif($request['ALERT_STATE'] == "255") {
+		} else{
 				$event->resolved = 1;
 		}
 		$event->entity_type = $request['ENTITY_TYPE'];
