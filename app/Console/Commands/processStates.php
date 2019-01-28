@@ -206,8 +206,6 @@ class processStates extends Command
 			}
 			//Get all NETWORK states that match this states sitecode
 			$siteNetworkStates = $state->getUnassignedSiteStatesPerDevice("NETWORK");
-			//Get all unassigned states that match this states sitecode.
-			$allSiteStates = $state->getUnassignedSiteStatesPerDevice();
 			$unresolvedSiteStates = $state->getUnresolvedUnassignedSiteStates();
 			//If there is more than 1 state that match sitecode, create a SITE incident.
 			if($siteNetworkStates->count() > 1 && $unresolvedSiteStates->count() > 0)
@@ -217,6 +215,8 @@ class processStates extends Command
 					'name'		=>	$state->get_sitecode(),
 					'type_id'	=>	$inctype->id,
 				]);
+				//Get all unassigned states that match this states sitecode.
+				$allSiteStates = $state->getUnassignedSiteStatesPerDevice();
 				//Assign all states to this new incident.
 				foreach($allSiteStates as $sitestate)
 				{

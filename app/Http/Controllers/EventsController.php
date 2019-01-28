@@ -15,7 +15,7 @@ class EventsController extends Controller
 		return Event::withTrashed()->get();
 	}
 	
-	public static function getEventsBetween($start, $end)
+/* 	public static function getEventsBetween($start, $end)
 	{
 		$start = new Carbon($start);
 		$start->tz = 'America/Chicago';
@@ -34,7 +34,7 @@ class EventsController extends Controller
 		$start = Carbon::Yesterday();
 		$end = Carbon::Today(); 
 		return self::getEventsBetween($start, $end);
-	}
+	} */
 
 	public function Netmon(Request $request)
 	{

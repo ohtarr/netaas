@@ -22,7 +22,15 @@ Route::get('/', function () {
 Route::post('/netmon/', 'EventsController@Netmon');
 
 Route::get('events', function() {
-	return view('events',['events' => Event::all()]);
+	return view('events',['events' => Event::getEventsLastDays(60)]);
+});
+
+Route::get('/events/lastdays/{days}', function($days){
+	return view('events',['events' => Event::getEventsLastDays($days)]);
+});
+
+Route::get('/events/between/{date1}/{date2}', function($start, $end){
+	return view('events',['events' => Event::getEventsBetween($start, $end)]);
 });
 
 Route::get('states', function() {
@@ -39,7 +47,7 @@ Route::get('stats', function() {
 		'states'	=>	State::withTrashed()->get(),
 		'incidents' =>	Incident::withTrashed()->get(),
 		'unassignedstates'	=>	State::withTrashed()->whereNull('incident_id')->get(),
-		'siteincidents'	=>	Incident::withTrashed()->where("type","site")->get(),
-		'deviceincidents'	=>	Incident::withTrashed()->where("type","device")->get(),
+		'siteincidents'	=>	Incident::withTrashed()->where("type_id",1)->orWhere('type_id',2)->get(),
+		'deviceincidents'	=>	Incident::withTrashed()->where("type_id",3)->orWhere('type_id',4)->get(),
 	]);
 });

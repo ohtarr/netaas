@@ -44,4 +44,26 @@ class Event extends Model
 		$this->save();
 		return $this;
 	}
+
+	public static function getEventsBetween($start, $end)
+	{
+		$start = new Carbon($start);
+		$start->tz = 'America/Chicago';
+		$end = new Carbon($end);
+		$end->tz = 'America/Chicago';
+		return Event::withTrashed()->whereBetween('created_at', array($start, $end))->get();
+	}
+
+	public static function getEventsLastDays($days)
+	{
+		return Event::withTrashed()->where('created_at', ">", Carbon::now()->subDays($days))->get();
+	}
+
+	public static function getYesterday()
+	{
+		$start = Carbon::Yesterday();
+		$end = Carbon::Today(); 
+		return self::getEventsBetween($start, $end);
+	}
+
 }
