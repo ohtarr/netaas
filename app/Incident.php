@@ -169,7 +169,12 @@ class Incident extends Model
 		if($location)
 		{
 			$contact = $location->getContact();
-			$contactdesc = "Site Contact: \nName: " . $contact->name . "\nPhone: " . $contact->phone . "\nMobile: " . $contact->mobile_phone . "\nEmail: " . $contact->email . "\n";
+			if($contact)
+			{
+				$contactdesc = "Site Contact: \nName: " . $contact->name . "\nPhone: " . $contact->phone . "\nMobile: " . $contact->mobile_phone . "\nEmail: " . $contact->email . "\n";
+			} else {
+				$contactdesc = "NO VALID CONTACT FOUND";
+			}
 			$weather = $location->getWeather();
 			$opengear = $location->getOpengear();
 			if(!$opengear)
@@ -184,11 +189,11 @@ class Incident extends Model
 			$locdesc .= "Comments: \n" . $location->u_comments . "\n";
 			$priority = $location->getPriorityString();
 		} else {
-			$contactdesc = "NO VALID LOCATION";
-			$weather = "NO VALID LOCATION";
-			$opengear = "NO VALID LOCATION";
+			$contactdesc = "NO VALID CONTACT";
+			$weather = "NO VALID WEATHER INFORMATION";
+			$opengear = "NO VALID OPENGEAR";
 			$locdesc = "NO VALID LOCATION";
-			$priority = "NO VALID LOCATION";
+			$priority = "NO VALID PRIORITY";
 		}
 		$result = $string;
 		$result = preg_replace('/{{name}}/', $this->name, $result);
