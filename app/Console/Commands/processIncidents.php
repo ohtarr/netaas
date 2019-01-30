@@ -206,9 +206,12 @@ class processIncidents extends Command
                         }
                         if($unstates->isEmpty())
                         {
-                            if($incident->get_latest_state()->updated_at->lt(Carbon::now()->subMinutes($incident->incidentType->autoresolve)))
+                            if($incident->get_latest_state())
                             {
-                                $incident->autoCloseTicket();
+                                if($incident->get_latest_state()->updated_at->lt(Carbon::now()->subMinutes($incident->incidentType->autoresolve)))
+                                {
+                                    $incident->autoCloseTicket();
+                                }
                             }
                         }
                         foreach($unpstates as $state)
