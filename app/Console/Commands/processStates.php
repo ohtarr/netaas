@@ -207,18 +207,17 @@ class processStates extends Command
 			//Get all NETWORK states that match this states sitecode
 			$siteNetworkStates = $state->getUnassignedSiteStatesPerDevice("NETWORK");
 			$unresolvedSiteStates = $state->getUnresolvedUnassignedSiteStates();
+			$siteStates = $state->getUnassignedSiteStatesPerDevice();
 			//If there is more than 1 state that match sitecode, create a SITE incident.
-			if($siteNetworkStates->count() > 1 && $unresolvedSiteStates->count() > 0)
+			if($siteNetworkStates->count() >= 1 && $siteStates->count() > 1 && $unresolvedSiteStates->count() > 0)
 			{
 				print "Detected more than 1 alert state from site " . $state->get_sitecode() . ".  Creating a SITE outage\n"; 
 				$newinc = Incident::create([
 					'name'		=>	$state->get_sitecode(),
 					'type_id'	=>	$inctype->id,
 				]);
-				//Get all unassigned states that match this states sitecode.
-				$allSiteStates = $state->getUnassignedSiteStatesPerDevice();
 				//Assign all states to this new incident.
-				foreach($allSiteStates as $sitestate)
+				foreach($siteStates as $sitestate)
 				{
 					foreach($sitestate as $sitedevicestate)
 					{
@@ -312,32 +311,35 @@ class processStates extends Command
 		foreach($states as $state)
 		{
 			$state->refresh();
-			//Find the correct incidentType.  If not found, exit function.
-			switch ($state->type) {
-				case "NETWORK":
-					$type = "DEVICE_NETWORK_LOW";
-					break;
-				case "SERVER_WINDOWS":
-					$type = "DEVICE_SERVER_MEDIUM";
-					break;
-				case "SERVER_NASUNI":
-				$type = "DEVICE_SERVER_MEDIUM";
-					break;
-				case "SERVER_ESXI":
-				$type = "DEVICE_SERVER_MEDIUM";
-					break;
-			}
-			$inctype = IncidentType::getIncidentTypeByName($type);
-			if(!$inctype)
-			{
-				return;
-			}
 			//Get all unassigned states that match this states sitecode.
 			$siteStates = $state->getUnassignedSiteStatesPerDevice();
 			$unresolvedSiteStates = $state->getUnresolvedUnassignedSiteStates();
-			//If there is only 1 device for this site AND it is not resolved, open a new device incident.
-			if($state->resolved == 0)
+			$incidents = Incident::where('name', $state->device_name)->get();
+			//If there is only 1 device for this site AND it is not resolved AND there is no current incident, open a new device incident.
+			//if($siteStates->count() == 1 && $unresolvedSiteStates->count() > 0 && $incidents->count() == 0)
+			if($unresolvedSiteStates->count() > 0)
 			{
+				//Find the correct incidentType.  If not found, exit function.
+				switch ($state->type) {
+					case "NETWORK":
+						$type = "DEVICE_NETWORK_LOW";
+						break;
+					case "SERVER_WINDOWS":
+						$type = "DEVICE_SERVER_MEDIUM";
+						break;
+					case "SERVER_NASUNI":
+					$type = "DEVICE_SERVER_MEDIUM";
+						break;
+					case "SERVER_ESXI":
+					$type = "DEVICE_SERVER_MEDIUM";
+						break;
+				}
+				$inctype = IncidentType::getIncidentTypeByName($type);
+				if(!$inctype)
+				{
+					return;
+				}
+
 				print "Found at least 1 alert state for device " . $state->device_name . ".  Creating a new Device incident\n";
 				$newinc = Incident::create([
 					'name'		=>	$state->device_name,
