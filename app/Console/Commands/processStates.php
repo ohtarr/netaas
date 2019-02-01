@@ -186,32 +186,32 @@ class processStates extends Command
 		foreach($states as $state)
 		{
 			$state->refresh();
-			//Get ServiceNowLocation for this state.
-			$location = $state->get_location();
-			//assume MEDIUM priority.
-			$inctype = IncidentType::getIncidentTypeByName("SITE_MEDIUM");
-			//If we have a valid location, get the priority of the site to determine incident priority.
-			//Overwrite inctype to SITE_HIGH if needed.
-			if($location)
-			{
-				if($location->u_priority == 2)
-				{
-					$inctype = IncidentType::getIncidentTypeByName("SITE_HIGH");
-				}
-			}
-			//If we can't find the proper IncidentType, exit the function.
-			if(!$inctype)
-			{
-				return;
-			}
 			//Get all NETWORK states that match this states sitecode
 			$siteNetworkStates = $state->getUnassignedSiteStatesPerDevice("NETWORK");
-			$unresolvedSiteStates = $state->getUnresolvedUnassignedSiteStates();
 			$siteStates = $state->getUnassignedSiteStatesPerDevice();
+			$unresolvedSiteStates = $state->getUnresolvedUnassignedSiteStates();
 			//If there is more than 1 state that match sitecode, create a SITE incident.
 			if($siteNetworkStates->count() >= 1 && $siteStates->count() > 1 && $unresolvedSiteStates->count() > 0)
 			{
 				print "Detected more than 1 alert state from site " . $state->get_sitecode() . ".  Creating a SITE outage\n"; 
+				//Get ServiceNowLocation for this state.
+				$location = $state->get_location();
+				//assume MEDIUM priority.
+				$inctype = IncidentType::getIncidentTypeByName("SITE_MEDIUM");
+				//If we have a valid location, get the priority of the site to determine incident priority.
+				//Overwrite inctype to SITE_HIGH if needed.
+				if($location)
+				{
+					if($location->u_priority == 2)
+					{
+						$inctype = IncidentType::getIncidentTypeByName("SITE_HIGH");
+					}
+				}
+				//If we can't find the proper IncidentType, exit the function.
+				if(!$inctype)
+				{
+					continue;
+				}
 				$newinc = Incident::create([
 					'name'		=>	$state->get_sitecode(),
 					'type_id'	=>	$inctype->id,
@@ -337,7 +337,7 @@ class processStates extends Command
 				$inctype = IncidentType::getIncidentTypeByName($type);
 				if(!$inctype)
 				{
-					return;
+					continue;
 				}
 
 				print "Found at least 1 alert state for device " . $state->device_name . ".  Creating a new Device incident\n";
