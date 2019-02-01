@@ -49,8 +49,6 @@ class processStates extends Command
 		$this->processExistingCompany();
 		$this->processNewCompany();
 		$this->processNewSite();
-		//$this->processNewDeviceNetwork();
-		//$this->processNewDeviceServer();
 		$this->processNewDevice();
 		$this->processStale();
 	}
@@ -230,78 +228,7 @@ class processStates extends Command
 			}
 		}
 	}
-/* 
-	//Check if a new DEVICE_NETWORK incident needs to be created for a single network device.
-	public static function processNewDeviceNetwork()
-	{
-		//Get all unassigned states that are older than the TIMER_STATE_SAMPLING_DELAY
-		$states = State::whereNull("incident_id")->where('updated_at',"<",Carbon::now()->subMinutes(env('TIMER_STATE_SAMPLING_DELAY')))->where("type","NETWORK")->get();
-		foreach($states as $state)
-		{
-			$state->refresh();
-			//Find the correct incidentType.  If not found, exit function.
-			$inctype = IncidentType::where("name","DEVICE_NETWORK_LOW")->first();
-			if(!$inctype)
-			{
-				return;
-			}
-			//Get all unassigned states that match this states sitecode.
-			$siteStates = $state->getUnassignedSiteStatesPerDevice();
-			//If there is only 1 device for this site AND it is not resolved, open a new device incident.
-			if($siteStates->count() == 1 && $siteStates->first()->where('resolved',0)->count() > 0)
-			{
-				$newinc = Incident::create([
-					'name'		=>	$state->device_name,
-					'type_id'	=>	$inctype->id,
-				]);
-				//Find all unassigned states with thie device name and assign them to new incident.
-				$devicestates = State::whereNull("incident_id")->where('device_name',$state->device_name)->get();
-				foreach($devicestates as $devicestate)
-				{
-					$devicestate->incident_id = $newinc->id;
-					$devicestate->processed = 1;
-					$devicestate->save();
-				}
-			}
-		}
-	}
 
-	//Check if a new DEVICE_SERVER incident needs to be created for a single server device.
-	public static function processNewDeviceServer()
-	{
-		//Get all unassigned states that are older than the TIMER_STATE_SAMPLING_DELAY
-		$states = State::whereNull("incident_id")->where('updated_at',"<",Carbon::now()->subMinutes(env('TIMER_STATE_SAMPLING_DELAY')))->where("type","SERVER")->get();
-		foreach($states as $state)
-		{
-			$state->refresh();
-			//Find the correct incidentType.  If not found, exit function.
-			$inctype = IncidentType::where("name","DEVICE_SERVER_HIGH")->first();
-			if(!$inctype)
-			{
-				return;
-			}
-			//Get all unassigned states that match this states sitecode.
-			$siteStates = $state->getUnassignedSiteStatesPerDevice();
-			//If there is only 1 device for this site AND it is not resolved, open a new device incident.
-			if($siteStates->count() == 1 && $siteStates->first()->where('resolved',0)->count() > 0)
-			{
-				$newinc = Incident::create([
-					'name'		=>	$state->device_name,
-					'type_id'	=>	$inctype->id,
-				]);
-				foreach($siteStates as $sitestate)
-				{
-					foreach($sitestate as $sitedevicestate)
-					{
-						$sitedevicestate->incident_id = $newinc->id;
-						$sitedevicestate->processed = 1;
-						$sitedevicestate->save();
-					}
-				}
-			}
-		}
-	}
- */
 	//Check if a new DEVICE_NETWORK incident needs to be created for a single network device.
 	public static function processNewDevice()
 	{
