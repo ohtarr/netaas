@@ -130,7 +130,7 @@ class Incident extends Model
 		}
 		return $this->location;
 	}
-/*
+
 	public function getStateStatus()
 	{
 		$description = "";

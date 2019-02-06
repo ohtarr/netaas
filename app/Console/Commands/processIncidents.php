@@ -171,7 +171,7 @@ class processIncidents extends Command
                     {
                         $msg = "Manual ticket closure was detected.  Clearing " . $incident->name . " from Netaas system.\n";
                         $msg .= "Current status of States: \n";
-                        $msg .= $incident->getStateStatus();
+                        $msg .= $incident->compileStateSummary();
                         //ADD COMMENT TO TICKET
                         $ticket->add_comment($msg);
                         //Set incident to RESOLVED
