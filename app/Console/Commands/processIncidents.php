@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use App\Incident;
+use App\IncidentType;
 use Carbon\Carbon;
 
 class processIncidents extends Command
@@ -175,7 +176,7 @@ class processIncidents extends Command
                         //ADD COMMENT TO TICKET
                         $ticket->add_comment($msg);
                         //Set incident to RESOLVED
-                        if($incident->type == "company")
+                        if($incident->incidentType->name == "COMPANY_CRITICAL")
                         {
                             //Purge all states attached to this incident and the incident.
                             $incident->purge();
@@ -203,6 +204,11 @@ class processIncidents extends Command
                         if($unpstates->isNotEmpty())
                         {
                             $incident->updateTicket();
+                            foreach($unpstates as $state)
+                            {
+                                $state->processed = 1;
+                                $state->save();
+                            }
                         }
                         if($unstates->isEmpty())
                         {
@@ -213,11 +219,6 @@ class processIncidents extends Command
                                     $incident->autoCloseTicket();
                                 }
                             }
-                        }
-                        foreach($unpstates as $state)
-                        {
-                            $state->processed = 1;
-                            $state->save();
                         }
                     //IF INCIDENT IS CLOSED
                     } else {
