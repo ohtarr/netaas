@@ -3,14 +3,6 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
-use App\Event;
-use App\State;
-use App\Incident;
-use App\ServiceNowIncident;
-use Carbon\Carbon;
-use App\Console\Commands\processEvents;
-use App\Console\Commands\processStates;
-use App\Console\Commands\processIncidents;
 
 class processAlerts extends Command
 {
@@ -45,9 +37,9 @@ class processAlerts extends Command
      */
     public function handle()
     {
-		processEvents::process();
-		processStates::process();
-		processIncidents::process();
+        $this->call('netaas:processEvents');
+        $this->call('netaas:processStates');
+        $this->call('netaas:processIncidents');
     }
 
 }

@@ -8,20 +8,43 @@ use App\Ticket;
 use App\State;
 use App\ServiceNowIncident;
 use App\ServiceNowLocation;
+use App\ServiceNowServer;
 use Carbon\Carbon;
 use GuzzleHttp\Client as GuzzleHttpClient;
+use App\IncidentType;
 
 class Incident extends Model
 {
 	use SoftDeletes;
-	protected $fillable = ['name','type'];
+	protected $fillable = ['name','type_id'];
 
 	protected $dates = [
         'created_at',
         'updated_at',
         'deleted_at',
-    ];
+	];
+	
+	public $location = null;
 
+	public function states()
+	{
+		return $this->hasMany('App\State');
+	}
+
+	public function incidentType()
+	{
+        return $this->hasOne('App\IncidentType','id','type_id');		
+	}
+
+	public function ticket()
+    {
+		if(!$this->ticket)
+		{
+			return null;
+		}
+		return ServiceNowIncident::find($this->ticket_id);
+	}
+	
 	//close this incident
 	public function close()
 	{
@@ -55,7 +78,7 @@ class Incident extends Model
 		$this->purgeStates();
 		$this->delete();
 	}
-		
+/*
 	public function getUrgency()
 	{
 		$location = $this->get_location();
@@ -79,7 +102,7 @@ class Incident extends Model
 		}
 		return $urgency;
 	}
-	
+
 	public function getImpact()
 	{
 		if($this->type == "company")
@@ -89,21 +112,25 @@ class Incident extends Model
 			return 2;
 		}	
 	}
-	
+/**/	
 	public function get_location()
 	{
-		//grab the first 8 characters of our name.  This is our sitecode!
-		$sitecode = strtoupper(substr($this->name,0,8));
-		$location = null;
-		try
+		if(!$this->location)
 		{
-			$location = ServiceNowLocation::where("name","=",$sitecode)->first();
-		} catch(\Exception $e) {
-		
+			//grab the first 8 characters of our name.  This is our sitecode!
+			$sitecode = strtoupper(substr($this->name,0,8));
+			$location = null;
+			try
+			{
+				$location = ServiceNowLocation::where("name","=",$sitecode)->first();
+			} catch(\Exception $e) {
+			
+			}
+			$this->location = $location;
 		}
-		return $location;
+		return $this->location;
 	}
-
+/*
 	public function getStateStatus()
 	{
 		$description = "";
@@ -128,7 +155,128 @@ class Incident extends Model
 		}
 		return $description;
 	}
-	
+/**/	
+	public function compileString($string)
+	{
+		$server = ServiceNowServer::where('name',$this->name)->first();
+		if($server)
+		{
+			$server_desc = $server->short_description;
+		} else {
+			$server_desc = "NO VALID SERVER";
+		}
+		$location = $this->get_location();
+		if($location)
+		{
+			$contact = $location->getContact();
+			if($contact)
+			{
+				$contactdesc = "Site Contact: \nName: " . $contact->name . "\nPhone: " . $contact->phone . "\nMobile: " . $contact->mobile_phone . "\nEmail: " . $contact->email . "\n";
+			} else {
+				$contactdesc = "NO VALID CONTACT FOUND";
+			}
+			$weather = $location->getWeather();
+			$opengear = $location->getOpengear();
+			if(!$opengear)
+			{
+				$opengear = "NO OPENGEAR FOUND";
+			}
+			$locdesc = "";
+			$locdesc .= "SITE NAME: " . $location->name . "\n\n";
+			$locdesc .= "Display Name: " . $location->u_display_name . "\n\n";
+			$locdesc .= "Description: " . $location->description . "\n\n";
+			$locdesc .= "Address: " . $location->street . ", " . $location->city . ", " . $location->state . ", " . $location->zip . "\n\n";
+			$locdesc .= "Comments: \n" . $location->u_comments . "\n";
+			$priority = $location->getPriorityString();
+		} else {
+			$contactdesc = "NO VALID CONTACT";
+			$weather = "NO VALID WEATHER INFORMATION";
+			$opengear = "NO VALID OPENGEAR";
+			$locdesc = "NO VALID LOCATION";
+			$priority = "NO VALID PRIORITY";
+		}
+		$result = $string;
+		$result = preg_replace('/{{name}}/', $this->name, $result);
+		$result = preg_replace('/{{state_summary}}/', $this->compileStateSummary(), $result);
+		$result = preg_replace('/{{count_states}}/', $this->get_states()->count(), $result);
+		$result = preg_replace('/{{count_devices}}/', $this->getUniqueDeviceStates()->count(), $result);
+		$result = preg_replace('/{{contact}}/', $contactdesc, $result);
+		$result = preg_replace('/{{weather}}/', $weather, $result);
+		$result = preg_replace('/{{opengear}}/', $opengear, $result);
+		$result = preg_replace('/{{location}}/', $locdesc, $result);
+		$result = preg_replace('/{{priority}}/', $priority, $result);
+		$result = preg_replace('/{{timestamp}}/', Carbon::now()->toDateTimeString(), $result);
+		//$result = preg_replace('/{{incident_type}/', IncidentType::find($this->incident_type_id)->name, $result);
+		$result = preg_replace('/{{company_threshold}}/', env('COMPANY_OUTAGE_COUNT'), $result);
+		$result = preg_replace('/{{server_desc}}/', $server_desc, $result);
+		return $result;
+	}
+
+ 	public function compileStateSummary()
+	{
+		$description = "";
+		foreach($this->getUniqueDeviceStates() as $name => $device)
+		{
+			$description .= "[" . $name . "]\n";
+			foreach($device as $state)
+			{
+				if($state->resolved == 0)
+				{
+					$description .= "---[ALERT]";
+				} else {
+					$description .= "+++[RECOVER]";
+				}
+				$description .= " [" . Carbon::parse($state->updated_at)->Format('m/d g:i A') . "]";
+				$description .= " [" . $state->type . "]";
+				$description .= " [" . $state->entity_type . "]";
+				if($state->entity_name)
+				{
+					$description .= " [" . $state->entity_name . "]";
+				}
+				if($state->entity_desc)
+				{
+					$description .= " [" . $state->entity_desc . "]";
+				}
+				$description .= "\n";
+			}
+			//$description .= "\n";
+		}
+		return $description;
+	}
+
+	/* public function compileStateSummary()
+	{
+		$description = "";
+		foreach($this->getUniqueDeviceStates() as $name => $device)
+		{
+			$description .= "### DEVICE " . $name . " ###\n";
+			foreach($device as $state)
+			{
+				if($state->resolved == 0)
+				{
+					$description .= "  [ALERT]\t";
+				} else {
+					$description .= "  [RECOVER]\t";
+				}
+				$description .= "" . Carbon::parse($state->updated_at)->Format('m/d g:i A') . "\t";
+				$description .= "" . $state->type . "\t";
+				$description .= "" . $state->entity_type . "\t";
+				if($state->entity_name)
+				{
+					$description .= "" . $state->entity_name . "\t";
+				}
+				if($state->entity_desc)
+				{
+					$description .= "" . $state->entity_desc . "\t";
+				}
+				$description .= "\n";
+			}
+			$description .= "\n";
+		}
+		return $description;
+	} */
+
+/*
 	public function createLocationDescription()
 	{
 		$description = "";
@@ -182,44 +330,29 @@ class Incident extends Model
 			$description .= "\n";
         }
 		$description .= "The following STATES have generated alerts.  The UP/DOWN status below indicates the states status at the time of this ticket being created. \n\n";
-		$description .= $this->getStateStatus();
+		$description .= $this->compileStateSummary();
 		$description .= $this->createLocationDescription();
 		$description .= "*****************************************************\n";
 		return $description;
 	}
-
+/**/
 	public function createTicket()
 	{
-		$urgency = $this->getUrgency();
-		$impact = $this->getImpact();
-		if($this->type == "company")
-		{
-			$summary = "ALERTS have been received for more than " . env("COMPANY_OUTAGE_COUNT") . " locations!";
-		}
-		if($this->type == "site")
-		{
-			$summary = "ALERTS have been received for MULTIPLE devices at site " . strtoupper($this->name);
-		}
-		if($this->type == "device")
-		{
-			$summary = "ALERTS have been received for device " . strtoupper($this->name);
-		}
 
-		$description = $this->createTicketDescription();
-		print "Creating Ticket of type " . $this->type . "\n";
+		print "Creating Ticket of type " . $this->IncidentType->name . "\n";
 		$ticket = ServiceNowIncident::create([
-			"cmdb_ci"			=>	env('SNOW_cmdb_ci'),
-			"impact"			=>	$impact,
-			"urgency"			=>	$urgency,
-			"short_description"	=>	$summary,
-			"description"		=>	$description,
+			"cmdb_ci"			=>	$this->IncidentType->ci_id,
+			"impact"			=>	$this->IncidentType->impact,
+			"urgency"			=>	$this->IncidentType->urgency,
+			"short_description"	=>	$this->compileString($this->IncidentType->summary),
+			"description"		=>	$this->compileString($this->IncidentType->description),
 			"assigned_to"		=>	"",
-			"caller_id"			=>	env('SNOW_caller_id'),
-			"assignment_group"	=>	env('SNOW_assignment_group'),
+			"caller_id"			=>	$this->IncidentType->caller_id,
+			"assignment_group"	=>	$this->IncidentType->group_id,
 		]);
 		if($ticket)
 		{
-			$this->ticket = $ticket->sys_id;
+			$this->ticket_id = $ticket->sys_id;
 			$this->save();
 			return $ticket;
 		}
@@ -233,13 +366,13 @@ class Incident extends Model
 		if($ticket)
 		{
 			$msg = "The following ALERTS have been received: \n";
-			$msg .= $this->getStateStatus();
+			$msg .= $this->compileStateSummary();
 			$msg .= "\nReopening the ticket!";
 			$ticket->add_comment($msg);
 			$this->resolved = 0;
 			$this->save();
-			$ticket->urgency = $this->getUrgency();
-			$ticket->impact = 2;
+			$ticket->urgency = $this->IncidentType->urgency;
+			$ticket->impact = $this->IncidentType->impact;
 			//$ticket->assigned_to = "";
 			$ticket->state=2;
 			$ticket->save();
@@ -267,7 +400,7 @@ class Incident extends Model
 	public function getUniqueDeviceStates()
 	{
 		$states = $this->get_states();
-		return $states->groupBy('name');
+		return $states->groupBy('device_name');
 	}
 
 	public function get_latest_state()
@@ -287,10 +420,11 @@ class Incident extends Model
 	public function updateTicket()
 	{
 		$msg = "";
-		if($ticket = $this->get_ticket())
+		$ticket = $this->get_ticket();
+		if($ticket)
 		{
 			$msg.= "State update detected.  Current status:\n";
-			$msg .= $this->getStateStatus();
+			$msg .= $this->compileStateSummary();
 			$ticket->add_comment($msg);
 			return 1;
 		}
@@ -314,16 +448,17 @@ class Incident extends Model
 
 	public function get_ticket()
 	{
-		if ($this->ticket)
+		if(!$this->ticket_id)
 		{
-			if($ticket = ServiceNowIncident::where("sys_id","=",$this->ticket)->first())
-			{
-				return $ticket;
-			}
+			return null;
 		}
-		return null;
+		if($ticket = ServiceNowIncident::where("sys_id","=",$this->ticket_id)->first())
+		{
+			return $ticket;
+		}
 	}
 
+	/*
 	public function process()
 	{
 		//Fetch me our ticket
@@ -409,5 +544,11 @@ class Incident extends Model
 				$this->createTicket();
 			}
 		}
+	}
+	/**/
+	public static function getIncidentsOfType($type)
+	{
+		$IncidentType = IncidentType::where('name',$type)->first();
+		return Incident::where('type_id',$IncidentType->id)->get();
 	}
 }

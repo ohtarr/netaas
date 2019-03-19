@@ -32,10 +32,12 @@
 	<tr>
 		<th>ID</th>
 		<th>SRC_IP</th>
-		<th>NAME</th>
 		<th>TYPE</th>
+		<th>DEVICE_NAME</th>
+		<th>ENTITY_TYPE</th>
+		<th>ENTITY_NAME</th>
+		<th>ENTITY_DESC</th>
 		<th>RESOLVED</th>
-		<th>TITLE</th>
 		<th>PROCESSED</th>
 		<th>CREATED_AT</th>
 		<th>UPDATED_AT</th>
@@ -45,10 +47,12 @@
 		<tr>
 			<td>{{ $event->id }}</td>
 			<td>{{ $event->src_ip }}</td>
-			<td>{{ $event->name }}</td>
 			<td>{{ $event->type }}</td>
+			<td>{{ $event->device_name }}</td>
+			<td>{{ $event->entity_type }}</td>
+			<td>{{ $event->entity_name }}</td>
+			<td>{{ $event->entity_desc }}</td>
 			<td>{{ $event->resolved }}</td>
-			<td>{{ $event->title }}</td>
 			<td>{{ $event->processed }}</td>
 			<td>{{ $event->created_at }}</td>
 			<td>{{ $event->updated_at }}</td>

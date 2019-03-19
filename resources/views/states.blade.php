@@ -31,8 +31,11 @@
 	<table>
 	<tr>
 		<th>ID</th>
-		<th>NAME</th>
 		<th>TYPE</th>
+		<th>DEVICE_NAME</th>
+		<th>ENTITY_TYPE</th>
+		<th>ENTITY_NAME</th>
+		<th>ENTITY_DESC</th>
 		<th>RESOLVED</th>
 		<th>PROCESSED</th>
 		<th>INCIDENT_ID</th>
@@ -43,8 +46,11 @@
     @foreach ($states as $state)
 		<tr>
 			<td>{{ $state->id }}</td>
-			<td>{{ $state->name }}</td>
 			<td>{{ $state->type }}</td>
+			<td>{{ $state->device_name }}</td>
+			<td>{{ $state->entity_type }}</td>
+			<td>{{ $state->entity_name }}</td>
+			<td>{{ $state->entity_desc }}</td>
 			<td>{{ $state->resolved }}</td>
 			<td>{{ $state->processed }}</td>
 			<td>{{ $state->incident_id }}</td>

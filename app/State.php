@@ -6,24 +6,38 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Incident;
 use Carbon\Carbon;
+use App\ServiceNowLocation;
 
 class State extends Model
 {
 	use SoftDeletes;
-	protected $fillable = ['name','type','state','processed','resolved','entity_name','entity_desc'];
+	protected $fillable = ['device_name','type','processed','resolved','entity_name','entity_type','entity_desc'];
 
 	//Convert state name to site code
 	public function get_sitecode()
 	{
 		//grab the first 8 characters of our name.  This is our sitecode!
-		$sitecode = substr($this->name,0,8);
+		$sitecode = substr($this->device_name,0,8);
         if (!$sitecode) {
-            throw new \Exception('Site code unknown for state id ' . $this->id . ' with name ' . $this->name);
+			//throw new \Exception('Site code unknown for state id ' . $this->id . ' with name ' . $this->name);
+			print "No valid site code found!\n";
+			return null;
         }
 		//Return the sitecode!
 		return $sitecode;
 	}
-	
+
+	public function get_location()
+	{
+		$location = ServiceNowLocation::where("name",$this->get_sitecode())->first();
+		if (!$location) {
+			//throw new \Exception('Location not found for sitecode with name ' . $this->get_sitecode());
+			print "Location not found for sitecode with name " . $this->get_sitecode() . "\n";
+        }
+		//Return the sitecode!
+		return $location;
+	}
+
 	/*
 	public function get_site_states()
 	{
@@ -36,35 +50,67 @@ class State extends Model
 		return State::where('name', 'like', '%' . $this->get_sitecode() . '%')->whereNull("incident_id")->get();
 	}
 	/**/
-	public function getUnassignedUniqueDeviceSiteStates()
-	{
-		$states = State::where('name', 'like', '%' . $this->get_sitecode() . '%')->whereNull("incident_id")->get();
-		return $states->groupBy('name');
-		//return $states;
-	}
-	
-	public function getUnresolvedUnassignedUniqueDeviceSiteStates()
-	{
-		$states = State::where('name', 'like', '%' . $this->get_sitecode() . '%')->whereNull("incident_id")->where("resolved",0)->get();
-		return $states->groupBy('name');
-		//return $states;
-	}
-
+/*
 	public static function getAllUnassignedSites()
 	{
+		$sites = [];
 		$allstates = State::whereNull("incident_id")->get();
-		$devices = $allstates->groupBy('name');
+		$devices = $allstates->groupBy('device_name');
 		foreach($devices as $device)
 		{
 			foreach($device as $entity)
 			{
-				$sites[] = substr($entity->name,0,8);
+				$sites[] = substr($entity->device_name,0,8);
 			}
 		}
 		$sites = array_unique($sites);
 		return $sites;
 	}
-	
+/**/
+	public static function getUnassignedStates()
+	{
+		return State::whereNull("incident_id")->get();
+	}
+
+	public static function getUnassignedStatesDelayed()
+	{
+		return State::whereNull("incident_id")->where('updated_at',"<",Carbon::now()->subMinutes(env('TIMER_STATE_SAMPLING_DELAY')))->get();
+	}
+
+	public static function getUnassignedResolvedStaleStates()
+	{
+		return State::whereNull("incident_id")->where('resolved',1)->where('updated_at',"<",Carbon::now()->subMinutes(env('TIMER_DELETE_STALE_STATES')))->get();
+	}
+
+/* 	public function getUnassignedSiteStatesPerDevice()
+	{
+		$states = State::where('device_name', 'like', '%' . $this->get_sitecode() . '%')->whereNull("incident_id")->get();
+		return $states->groupBy('device_name');
+	} */
+
+	public function getUnassignedSiteStatesPerDevice($type = null)
+	{
+		$query = State::where('device_name', 'like', '%' . $this->get_sitecode() . '%')->whereNull("incident_id");
+		if($type)
+		{
+			$query = $query->where("type",$type);
+		}
+		$states = $query->get();
+		return $states->groupBy('device_name');
+	}
+
+	public function getUnresolvedUnassignedSiteStates()
+	{
+		return State::where('device_name', 'like', '%' . $this->get_sitecode() . '%')->whereNull("incident_id")->where("resolved",0)->get();
+	}
+/*	
+	public function getUnresolvedUnassignedUniqueDeviceSiteStates()
+	{
+		$states = State::where('device_name', 'like', '%' . $this->get_sitecode() . '%')->whereNull("incident_id")->where("resolved",0)->get();
+		return $states->groupBy('device_name');
+	}
+/**/
+/*
 	//Locate an existing incident for this state.
 	public function find_incident()
 	{
@@ -77,7 +123,7 @@ class State extends Model
 				return $incident;
 			}
 		//find any existing incidents first.
-		} elseif($deviceincident = Incident::where('name',$this->name)->first()){
+		} elseif($deviceincident = Incident::where('name',$this->device_name)->first()){
 			return $deviceincident;
 		//Now look for any existing SITE incidents.
 		} elseif($siteincident = Incident::where('type', "site")->where('name', $this->get_sitecode())->first()){
@@ -90,12 +136,13 @@ class State extends Model
 			return null;
 		}
 	}
-	
+/**/
+/*	
 	public function create_new_incident()
 	{
 		$sites = $this->getAllUnassignedSites();		
 		//$usitedevices = $this->get_unassigned_site_states()->groupBy('name');
-		$usitedevices = $this->getUnassignedUniqueDeviceSiteStates();
+		$usitedevices = $this->getUnassignedSiteStatesPerDevice();
 		//If there is more than 1 device with same site code in state table
 		if(count($sites) > env("COMPANY_OUTAGE_COUNT"))
 		{
@@ -106,7 +153,7 @@ class State extends Model
 			$name = $this->get_sitecode();
 		} else {
 			$type = "device";
-			$name = $this->name;
+			$name = $this->device_name;
 		}
 		//Create an incident is it is a SITE, or a device that is still unresolved
 		if ($type == "site" || $type == "company" || $this->resolved == 0)
@@ -128,11 +175,12 @@ class State extends Model
 			}
 		}
 	}
-
+/**/
+/*
 	//Created an incident in the incident table
 	public function create_incident($name, $type)
 	{
-		print "Creating a new incident for " . $this->name . "\n";
+		print "Creating a new incident for " . $this->device_name . "\n";
 		//Create a new incident with provided name and type.
 		$newinc = Incident::create([
 			'name'		=>	$name,
@@ -141,5 +189,5 @@ class State extends Model
 		//Return the new incident.
 		return $newinc;
 	}
-
+/**/
 }
