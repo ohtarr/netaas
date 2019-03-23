@@ -29,7 +29,7 @@ class State extends Model
 
 	public function get_location()
 	{
-		$location = ServiceNowLocation::where("name",$this->get_sitecode())->first();
+		$location = ServiceNowLocation::where("name","=",$this->get_sitecode())->first();
 		if (!$location) {
 			//throw new \Exception('Location not found for sitecode with name ' . $this->get_sitecode());
 			print "Location not found for sitecode with name " . $this->get_sitecode() . "\n";
