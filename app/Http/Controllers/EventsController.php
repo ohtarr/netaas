@@ -85,4 +85,12 @@ class EventsController extends Controller
 		$event->save();
 		return $event;
 	}
+
+	public function Azure(Request $request)
+	{
+		$message = "Received new request from " . $request->ip() . ":\n";
+		$message .= $request;
+		Log::info($message);
+	}
+
 }

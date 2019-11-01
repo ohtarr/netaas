@@ -22,6 +22,7 @@ Route::middleware('auth:api')->get('/user', function (Request $request) {
 
 Route::post('/netmon/', 'EventsController@Netmon');
 Route::post('/scom/', 'EventsController@Scom');
+Route::post('/azure/', 'EventsController@Azure');
 
 Route::get('/events/', 'EventsController@getEvents');
 
