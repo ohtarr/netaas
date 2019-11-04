@@ -91,6 +91,16 @@ class EventsController extends Controller
 		$message = "Received new request from " . $request->ip() . ":\n";
 		$message .= $request;
 		Log::info($message);
+		$event = new Event;
+		$event->src_ip = $request->ip();
+		$event->type = strtoupper($request['TYPE']);
+		$event->device_name = $request['DEVICE'];
+		$event->resolved = $request['RESOLVED'];
+		$event->entity_type = $request['ENTITY_TYPE'];
+		$event->entity_name = $request['ENTITY_NAME'];
+		$event->entity_desc = $request['ENTITY_DESC'];
+		$event->save();
+		return $event;
 	}
 
 }
