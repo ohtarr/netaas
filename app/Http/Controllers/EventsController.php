@@ -42,8 +42,8 @@ class EventsController extends Controller
 		$message .= $request;
 		Log::info($message);
 		$event = new Event;
-		$event->src_ip = $request->ip();
-		$event->device_name = $request['DEVICE_HOSTNAME'];
+		$event->src_ip = substr($request->ip(),0,249);
+		$event->device_name = substr($request['DEVICE_HOSTNAME'],0,249);
 		$event->type = "NETWORK";
 		if($request['ALERT_STATE'] == "ALERT")
 		{
@@ -51,9 +51,9 @@ class EventsController extends Controller
 		} else {
 			$event->resolved = 1;
 		}
-		$event->entity_type = $request['ALERT_MESSAGE'];
-		$event->entity_name = $request['ENTITY_NAME'];
-		$event->entity_desc = $request['ENTITY_DESCRIPTION'];
+		$event->entity_type = substr($request['ALERT_MESSAGE'],0,249);
+		$event->entity_name = substr($request['ENTITY_NAME'],0,249);
+		$event->entity_desc = substr($request['ENTITY_DESCRIPTION'],0,9999);
 
 		$event->save();
 		return response()->json($event);
@@ -65,11 +65,11 @@ class EventsController extends Controller
 		$message .= $request;
 		Log::info($message);
 		$event = new Event;
-		$event->src_ip = $request->ip();
-		$event->device_name = $request['DEVICE_HOSTNAME'];
+		$event->src_ip = substr($request->ip(),0,249);
+		$event->device_name = substr($request['DEVICE_HOSTNAME'],0,249);
 		if($request['TYPE'])
 		{
-			$event->type = $request['TYPE'];
+			$event->type = substr($request['TYPE'],0,249);
 		} else {
 			$event->type = "SERVER";
 		}
@@ -79,9 +79,9 @@ class EventsController extends Controller
 		} else{
 				$event->resolved = 1;
 		}
-		$event->entity_type = $request['ENTITY_TYPE'];
-		$event->entity_name = $request['ENTITY_NAME'];
-		$event->entity_desc = $request['ENTITY_DESCRIPTION'];
+		$event->entity_type = substr($request['ENTITY_TYPE'],0,249);
+		$event->entity_name = substr($request['ENTITY_NAME'],0,249);
+		$event->entity_desc = substr($request['ENTITY_DESCRIPTION'],0,9999);
 		$event->save();
 		return $event;
 	}
@@ -92,13 +92,13 @@ class EventsController extends Controller
 		$message .= $request;
 		Log::info($message);
 		$event = new Event;
-		$event->src_ip = $request->ip();
-		$event->type = strtoupper($request['TYPE']);
-		$event->device_name = $request['DEVICE'];
-		$event->resolved = $request['RESOLVED'];
-		$event->entity_type = $request['ENTITY_TYPE'];
-		$event->entity_name = $request['ENTITY_NAME'];
-		$event->entity_desc = $request['ENTITY_DESC'];
+		$event->src_ip = substr($request->ip(),0,249);
+		$event->type = strtoupper(substr($request['TYPE'],0,249));
+		$event->device_name = substr($request['DEVICE'],0,249);
+		$event->resolved = substr($request['RESOLVED'],0,249);
+		$event->entity_type = substr($request['ENTITY_TYPE'],0,249);
+		$event->entity_name = substr($request['ENTITY_NAME'],0,249);
+		$event->entity_desc = substr($request['ENTITY_DESC'],0,9999);
 		$event->save();
 		return $event;
 	}
