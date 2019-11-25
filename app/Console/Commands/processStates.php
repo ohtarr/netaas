@@ -255,10 +255,13 @@ class processStates extends Command
 						$type = "DEVICE_SERVER_MEDIUM";
 						break;
 					case "SERVER_NASUNI":
-					$type = "DEVICE_SERVER_MEDIUM";
+						$type = "DEVICE_SERVER_MEDIUM";
 						break;
 					case "SERVER_ESXI":
-					$type = "DEVICE_SERVER_MEDIUM";
+						$type = "DEVICE_SERVER_MEDIUM";
+						break;
+					case "AZURE":
+						$type = "DEVICE_AZURE_MEDIUM";
 						break;
 				}
 				$inctype = IncidentType::getIncidentTypeByName($type);
