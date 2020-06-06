@@ -235,7 +235,13 @@ class Incident extends Model
 				}
 				if($state->entity_desc)
 				{
-					$description .= " [" . $state->entity_desc . "]";
+					if(is_array(json_decode($state->entity_desc,TRUE))){
+						$description .= "\n";
+						$description .= "DESCRIPTION:\n";
+						$description .= json_encode(json_decode($state->entity_desc),JSON_PRETTY_PRINT);
+					} else {
+						$description .= " [" . $state->entity_desc . "]";
+					}
 				}
 				$description .= "\n";
 			}

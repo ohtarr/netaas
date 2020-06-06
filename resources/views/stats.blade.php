@@ -28,17 +28,17 @@
 <body class="container">
 <div class="col-sm-8 col-sm-offset-2">
 
-Event TOTAL: {{ $events->count()}}<br>
-Event ALERT: {{ $events->where("resolved",0)->count()}} <br>
-Event RESOLVE: {{$events->where("resolved",1)->count()}} <br>
+Event TOTAL: {{ $events_count }}<br>
+Event ALERT: {{ $events_alert }} <br>
+Event RESOLVE: {{$events_resolved }} <br>
 <br>
-State TOTAL: {{ $states->count()}}<br>
-State Unassigned: {{ $unassignedstates->count()}}<br>
+State TOTAL: {{ $states_count }}<br>
+State Unassigned: {{ $unassignedstates }}<br>
 
 <br>
-Incident TOTAL: {{ $incidents->count()}}<br>
-Incident SITE:	{{ $siteincidents->count()}}<br>
-Incident DEVICE: {{ $deviceincidents->count()}}<br>
+Incident TOTAL: {{ $incidents }}<br>
+Incident SITE:	{{ $siteincidents }}<br>
+Incident DEVICE: {{ $deviceincidents }}<br>
 
 
 </div>

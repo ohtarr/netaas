@@ -43,11 +43,13 @@ Route::get('incidents', function() {
 
 Route::get('stats', function() {
 	return view('stats',[
-		'events'	=>	Event::withTrashed()->get(),
-		'states'	=>	State::withTrashed()->get(),
-		'incidents' =>	Incident::withTrashed()->get(),
-		'unassignedstates'	=>	State::withTrashed()->whereNull('incident_id')->get(),
-		'siteincidents'	=>	Incident::withTrashed()->where("type_id",1)->orWhere('type_id',2)->get(),
-		'deviceincidents'	=>	Incident::withTrashed()->where("type_id",3)->orWhere('type_id',4)->get(),
+		'events_count'	=>	Event::withTrashed()->count(),
+		'events_alert'	=>	Event::withTrashed()->where("resolved",0)->count(),
+		'events_resolved'	=>	Event::withTrashed()->where("resolved",1)->count(),
+		'states_count'	=>	State::withTrashed()->count(),
+		'incidents' =>	Incident::withTrashed()->count(),
+		'unassignedstates'	=>	State::withTrashed()->whereNull('incident_id')->count(),
+		'siteincidents'	=>	Incident::withTrashed()->where("type_id",1)->orWhere('type_id',2)->count(),
+		'deviceincidents'	=>	Incident::withTrashed()->where("type_id",3)->orWhere('type_id',4)->count(),
 	]);
 });
