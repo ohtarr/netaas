@@ -344,6 +344,13 @@ class Incident extends Model
 /**/
 	public function createTicket()
 	{
+		$location = $this->get_location();
+		if($location->u_active == "true" || $location->u_priority == 0)
+		{
+			print "Location is deactivated or set to NO MONITORING, purging from system\n";
+			$this->purge();
+			return null;
+		}
 
 		print "Creating Ticket of type " . $this->IncidentType->name . "\n";
 		$ticket = ServiceNowIncident::create([
