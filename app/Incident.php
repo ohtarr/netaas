@@ -235,7 +235,13 @@ class Incident extends Model
 				}
 				if($state->entity_desc)
 				{
-					$description .= " [" . $state->entity_desc . "]";
+					if(is_array(json_decode($state->entity_desc,TRUE))){
+						$description .= "\n";
+						$description .= "DESCRIPTION:\n";
+						$description .= json_encode(json_decode($state->entity_desc),JSON_PRETTY_PRINT);
+					} else {
+						$description .= " [" . $state->entity_desc . "]";
+					}
 				}
 				$description .= "\n";
 			}
@@ -338,6 +344,16 @@ class Incident extends Model
 /**/
 	public function createTicket()
 	{
+		$location = $this->get_location();
+		if($location)
+		{
+			if($location->u_active == "false" || $location->u_priority == 0)
+			{
+				print "Location is deactivated or set to NO MONITORING, purging from system\n";
+				$this->purge();
+				return null;
+			}
+		}
 
 		print "Creating Ticket of type " . $this->IncidentType->name . "\n";
 		$ticket = ServiceNowIncident::create([
