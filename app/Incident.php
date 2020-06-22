@@ -347,7 +347,7 @@ class Incident extends Model
 		$location = $this->get_location();
 		if($location)
 		{
-			if($location->u_active == "true" || $location->u_priority == 0)
+			if($location->u_active == "false" || $location->u_priority == 0)
 			{
 				print "Location is deactivated or set to NO MONITORING, purging from system\n";
 				$this->purge();
