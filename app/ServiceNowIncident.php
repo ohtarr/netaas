@@ -12,6 +12,9 @@ class ServiceNowIncident extends ServiceNowModel
 	
 	public function close($msg)
 	{
+		$message = "ServiceNowIncident ID " . $this->sys_id . " Close";
+		print $message . "\n";
+		Log::info($message);
 		$this->u_cause_code = "Environment";
 		$this->close_notes = $msg;
 		$this->state = 6;
@@ -20,12 +23,18 @@ class ServiceNowIncident extends ServiceNowModel
 
 	public function open()
 	{
+		$message = "ServiceNowIncident ID " . $this->sys_id . " Open";
+		print $message . "\n";
+		Log::info($message);
 		$this->state = 2;
 		$this->save();
 	}
 
 	public function add_comment($comment)
 	{
+		$message = "ServiceNowIncident ID " . $this->sys_id . " add_comment";
+		print $message . "\n";
+		Log::info($message);
 		$this->comments = $comment;
 		$this->save();
 	}
