@@ -50,19 +50,27 @@ class processEvents extends Command
 		
 		foreach($events as $event)
 		{
-			print "Processing EVENT FOR DEVICE " . $event->device_name . "\n";
+            $message = "processEvents Processing Event " . $event->id . " for device " . $event->device_name;
+            print $message . "\n";
+            Log::info($message);
 			$state = $event->get_state();
 			if($state)
 			{
-                print "State " . $state->device_name . " found, updating State.\n";
+                $message = "processEvents State with ID " . $state->id . " found for event " . $event->device_name . " with ID " . $event->id . " .. updating State";
+                print $message . "\n";
+                Log::info($message);
                 $state = $event->update_state();
 			} else {
-				print "No State found.  Creating a new State.\n";
+                $message = "processEvents State NOT FOUND for event " . $event->device_name . " with ID " . $event->id . " Creating new State.";
+                print $message . "\n";
+                Log::info($message);
                 $state = $event->create_state();
 			}
 			if($state)
 			{
-				print "Flagging Event processed.\n";
+                $message = "processEvents Flagging EVENT " . $event->device_name . " with ID " . $event->id . " processed.";
+                print $message . "\n";
+                Log::info($message);
                 $event->mark_processed();
 			}
 		}

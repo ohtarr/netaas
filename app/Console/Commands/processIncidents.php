@@ -152,7 +152,9 @@ class processIncidents extends Command
         $incidents = Incident::all();
         foreach($incidents as $incident)
         {
-            print "Processing INCIDENT " . $incident->name . "\n";
+            $message = "processIncidents Processing INCIDENT " . $incident->name . " with ID " . $incident->id;
+            print $message . "\n";
+            Log::info($message);
             //Fetch me our ticket
             $ticket = $incident->get_ticket();
             $unstates = $incident->get_unresolved_states();
@@ -240,7 +242,9 @@ class processIncidents extends Command
                 //if($incident->incidentType->name == "SITE_HIGH" || $incident->incidentType->name == "COMPANY_CRITICAL" || $unstates->isNotEmpty())
                 //{
                     //Create a new snow ticket
-                    print $incident->name . "Creating a SNOW ticket!\n";
+                    $message = "processIncidents Creating a SNOW ticket for incident " . $incident->name . " with ID " . $incident->id;
+                    print $message . "\n";
+                    Log::info($message);
                     $incident->createTicket();
                 //}
             }
