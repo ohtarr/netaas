@@ -18,6 +18,9 @@ class Event extends Model
 
 	public function update_state()
 	{
+		$message = "EVENT ID " . $this->id . " update_state";
+		print $message . "\n";
+		Log::info($message);
 		$state = $this->get_state();
 		$state->resolved = $this->resolved;
 		$state->processed = 0;
@@ -27,6 +30,9 @@ class Event extends Model
 
  	public function create_state()
 	{
+		$message = "EVENT ID " . $this->id . " create_state";
+		print $message . "\n";
+		Log::info($message);
 		return State::create([
 			'device_name'			=>	$this->device_name,
 			'type'					=>	$this->type,
@@ -40,6 +46,9 @@ class Event extends Model
 
 	public function mark_processed()
 	{
+		$message = "EVENT ID " . $this->id . " mark_processed";
+		print $message . "\n";
+		Log::info($message);
 		$this->processed = 1;
 		$this->save();
 		return $this;
