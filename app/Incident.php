@@ -48,6 +48,9 @@ class Incident extends Model
 	//close this incident
 	public function close()
 	{
+		$message = "INCIDENT ID " . $this->id . " Close";
+		print $message . "\n";
+		Log::info($message);
 		$this->resolved = 1;
 		$this->save(); 
 	}
@@ -75,6 +78,9 @@ class Incident extends Model
 	
 	public function purge()
 	{
+		$message = "INCIDENT ID " . $this->id . " Purge";
+		print $message . "\n";
+		Log::info($message);
 		$this->purgeStates();
 		$this->delete();
 	}
@@ -344,17 +350,24 @@ class Incident extends Model
 /**/
 	public function createTicket()
 	{
+		$message = "INCIDENT ID " . $this->id . " Creating Service-Now Incident for incident ID ";
+		print $message . "\n";
+		Log::info($message);
 		$location = $this->get_location();
 		if($location)
 		{
 			if($location->u_active == "false" || $location->u_priority == 0)
 			{
-				print "Location is deactivated or set to NO MONITORING, purging from system\n";
+				$message = "INCIDENT ID " . $this->id . " Location is deactivated or set to NO MONITORING, purging from system";
+				print $message . "\n";
+				Log::info($message);
 				$this->purge();
 				return null;
 			}
 		}
-
+		$message = "INCIDENT ID " . $this->id . " Creating Ticket of type " . $this->IncidentType->name;
+		print $message . "\n";
+		Log::info($message);
 		print "Creating Ticket of type " . $this->IncidentType->name . "\n";
 		$ticket = ServiceNowIncident::create([
 			"cmdb_ci"			=>	$this->IncidentType->ci_id,
@@ -368,15 +381,24 @@ class Incident extends Model
 		]);
 		if($ticket)
 		{
+			$message = "INCIDENT ID " . $this->id . " Successfully created Ticket " . $ticket->sys_id;
+			print $message . "\n";
+			Log::info($message);
 			$this->ticket_id = $ticket->sys_id;
 			$this->save();
 			return $ticket;
 		}
+		$message = "INCIDENT ID " . $this->id . " Failed to create Ticket";
+		print $message . "\n";
+		Log::info($message);
 		return null;
 	}
 
 	public function reopenTicket()
 	{
+		$message = "INCIDENT ID " . $this->id . " Reopen Ticket";
+		print $message . "\n";
+		Log::info($message);
 		$ticket = $this->get_ticket();
 		$unstates = $this->get_unresolved_states();
 		if($ticket)
@@ -399,6 +421,9 @@ class Incident extends Model
 
 	public function autoCloseTicket()
 	{
+		$message = "INCIDENT ID " . $this->id . " Auto Close Ticket";
+		print $message . "\n";
+		Log::info($message);
 		$ticket = $this->get_ticket();
 		$msg = "All devices have recovered.  Auto Closing Ticket!";
 		print $this->name . " " . $msg . "\n";
@@ -435,6 +460,9 @@ class Incident extends Model
 
 	public function updateTicket()
 	{
+		$message = "INCIDENT ID " . $this->id . " Update Ticket";
+		print $message . "\n";
+		Log::info($message);
 		$msg = "";
 		$ticket = $this->get_ticket();
 		if($ticket)
