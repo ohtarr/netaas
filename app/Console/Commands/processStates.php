@@ -56,7 +56,10 @@ class processStates extends Command
 	//Look for existing DEVICE incident, if exists assign states to it.
 	public static function processExistingDevice()
 	{
-		print "Processing Existing Devices\n";
+		$message = "processStates State " . $event->device_name . " with ID " . $event->id . " found.. updating State";
+		$message = "Processing Existing Devices";
+		print $message . "\n";
+		Log::info($message);
 		//Get all states that are not already assigned to an incident and foreach through them.
 		$states = State::getUnassignedStates();
 		foreach($states as $state)
@@ -71,7 +74,9 @@ class processStates extends Command
 				$devicestates = State::whereNull("incident_id")->where('device_name',$state->device_name)->get();
 				foreach($devicestates as $devicestate)
 				{
-					print "Found existing Incident for state " . $devicestate->device_name . ".  Adding it to existing incident\n";
+					$message = "processStates Found existing Incident with ID " . $deviceincident->id . " for state " . $devicestate->device_name . " with ID " . $devicestate->id . " Adding to existing incident.";
+					print $message . "\n";
+					Log::info($message);
 					$devicestate->incident_id = $deviceincident->id;
 					$devicestate->save();
 				}
@@ -82,7 +87,9 @@ class processStates extends Command
 	//look for an existing network SITE incident.  If one exists, assign all related states to it.
 	public static function processExistingSite()
 	{
-		print "Processing Existing Sites\n";
+		$message = "processStates Processing Existing Sites";
+		print $message . "\n";
+		Log::info($message);
 		//Find all unassigned states and Check if an existing site incident exists for it.
 		$states = State::getUnassignedStates();
 		foreach($states as $state)
@@ -98,7 +105,9 @@ class processStates extends Command
 				{
 					foreach($sitestate as $sitedevicestate)
 					{
-						print "Found existing incident for " . $sitedevicestate->device_name . ".  Adding to existing incident.\n";
+						$message = "processStates Found existing Incident ID " . $siteincident->id . " for " . $sitedevicestate->device_name . " with ID " . $sitedevicestate->id . " Adding to existing incident.";
+						print $message . "\n";
+						Log::info($message);	
 						$sitedevicestate->incident_id = $siteincident->id;
 						$sitedevicestate->save();
 					}
@@ -110,7 +119,9 @@ class processStates extends Command
 	//Look for existing COMPANY outage, if exists, assign ALL states to it.
 	public static function processExistingCompany()
 	{
-		print "Processing Existing Company Outage\n";
+		$message = "processStates Processing Existing Company Outage";
+		print $message . "\n";
+		Log::info($message);
 		//Find the incidentType for COMPANY_CRITICAL.  If it doesn't exist, exit function.
 		$inctype = IncidentType::getIncidentTypeByName("COMPANY_CRITICAL");
 		if(!$inctype)
@@ -124,7 +135,9 @@ class processStates extends Command
 			$states = State::getUnassignedStates();
 			foreach($states as $state)
 			{
-				print "Adding state " . $state->device_name . " to company outage!!\n";
+				$message = "processStates Adding state " . $state->device_name . " with ID " . $state->id . " to existing company outage with ID " . $companyincident->id;
+				print $message . "\n";
+				Log::info($message);
 				$state->incident_id = $companyincident->id;
 				$state->save();
 			}
@@ -135,7 +148,9 @@ class processStates extends Command
 	//Check if a new COMPANY incident needs to be created.
 	public static function processNewCompany()
 	{
-		print "Processing New Company Outage\n";
+		$message = "processStates Processing New company outage";
+		print $message . "\n";
+		Log::info($message);
 		//Look for COMPANY_CRITICAL incidentType.  If it doesn't exist, exit the function.
 		$inctype = IncidentType::getIncidentTypeByName("COMPANY_CRITICAL");
 		$states = State::getUnassignedStatesDelayed();
@@ -159,7 +174,9 @@ class processStates extends Command
 		{
 			return;
 		}
-		print "Detected more than " . env("COMPANY_OUTAGE_COUNT") . " alert states.  Creating a new COMPANY OUTAGE\n";
+		$message = "processStates Detected more than " . env("COMPANY_OUTAGE_COUNT") . " alert states.  Creating a new COMPANY OUTAGE.";
+		print $message . "\n";
+		Log::info($message);
 		$newinc = Incident::create([
 			'name'		=>	"company",
 			'type_id'	=>	$inctype->id,
@@ -167,7 +184,9 @@ class processStates extends Command
 		//Assign ALL unassigned states to this company outage incident.
 		foreach($states as $state)
 		{
-			print "Adding state " . $state->device_name . " to company outage incident\n";
+			$message = "processStates Adding state " . $state->device_name . " with ID " . $state->id . " to company outage incident ID " . $newinc->id;
+			print $message . "\n";
+			Log::info($message);
 			$state->incident_id = $newinc->id;
 			$state->processed = 1;
 			$state->save();
@@ -178,7 +197,9 @@ class processStates extends Command
 	//Check if a new SITE incident needs to be created.
 	public static function processNewSite()
 	{
-		print "Processing New Sites\n";
+		$message = "processStates Processing New Sites";
+		print $message . "\n";
+		Log::info($message);
 		//Get all states that are unassigned and older than TIMER_STATE_SAMPLING_DELAY
 		$states = State::getUnassignedStatesDelayed();
 		foreach($states as $state)
@@ -191,7 +212,9 @@ class processStates extends Command
 			//If there is more than 1 state that match sitecode, create a SITE incident.
 			if($siteNetworkStates->count() >= 1 && $siteStates->count() > 1 && $unresolvedSiteStates->count() > 0)
 			{
-				print "Detected more than 1 alert state from site " . $state->get_sitecode() . ".  Creating a SITE outage\n"; 
+				$message = "processStates Detected more than 1 alert state from site " . $state->get_sitecode() . ". Creating a SITE outage";
+				print $message . "\n";
+				Log::info($message);
 				//Get ServiceNowLocation for this state.
 				$location = $state->get_location();
 				//assume MEDIUM priority.
@@ -219,7 +242,9 @@ class processStates extends Command
 				{
 					foreach($sitestate as $sitedevicestate)
 					{
-						print "Adding alert state " . $sitedevicestate->device_name . " to Site incident\n";
+						$message = "processStates Adding alert state " . $sitedevicestate->device_name . " to Site incident ID " . $newinc->id;
+						print $message . "\n";
+						Log::info($message);
 						$sitedevicestate->incident_id = $newinc->id;
 						$sitedevicestate->processed = 1;
 						$sitedevicestate->save();
@@ -232,7 +257,9 @@ class processStates extends Command
 	//Check if a new DEVICE_NETWORK incident needs to be created for a single network device.
 	public static function processNewDevice()
 	{
-		print "Processing New Devices\n";
+		$message = "processStates Processing New Devices";
+		print $message . "\n";
+		Log::info($message);
 		//Get all unassigned states that are older than the TIMER_STATE_SAMPLING_DELAY
 		$states = State::getUnassignedStatesDelayed();
 		foreach($states as $state)
@@ -269,19 +296,25 @@ class processStates extends Command
 				{
 					continue;
 				}
-
-				print "Found at least 1 alert state for device " . $state->device_name . ".  Creating a new Device incident\n";
+				$message = "processStates Found at least 1 alert state for device " . $state->device_name . ". Creating a new Device incident";
+				print $message . "\n";
+				Log::info($message);
 				$newinc = Incident::create([
 					'name'		=>	$state->device_name,
 					'type_id'	=>	$inctype->id,
 				]);
+				$message = "processStates Created new incident ID " . $newinc->id . " for device " . $state->device_name;
+				print $message . "\n";
+				Log::info($message);
 				//Find all unassigned states with this device name and assign them to new incident.
 				//$devicestates = State::whereNull("incident_id")->where('device_name',$state->device_name)->get();
 				$devicestates = $siteStates->first();
 				//print_r($devicestates);
 				foreach($devicestates as $devicestate)
 				{
-					print "Adding alert state " . $devicestate->device_name . "to device incident\n";
+					$message = "processStates Adding alert state " . $devicestate->device_name . " to device incident ID " . $newinc->id;
+					print $message . "\n";
+					Log::info($message);
 					$devicestate->incident_id = $newinc->id;
 					$devicestate->processed = 1;
 					$devicestate->save();
@@ -293,11 +326,16 @@ class processStates extends Command
 	//Check for any resolved states that never created an incident.  If stale time expired, delete them.
 	public static function processStale()
 	{
-		print "Processing Stale States\n";
+		$message = "processStates Processing Stale States";
+		print $message . "\n";
+		Log::info($message);
 		$states = State::getUnassignedResolvedStaleStates();
 		foreach($states as $state)
 		{
-			print "Deleting stale alert state " . $state->device_name . ".\n";
+			$message = "processStates Deleting stale alert state " . $state->device_name;
+			print $message . "\n";
+			Log::info($message);
+
 			$state->refresh();
 			$state->delete();
 		}
