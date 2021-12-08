@@ -7,6 +7,7 @@ use App\State;
 use App\Incident;
 use App\IncidentType;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class processStates extends Command
 {

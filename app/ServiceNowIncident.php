@@ -3,6 +3,7 @@
 namespace App;
 
 use ohtarr\ServiceNowModel;
+use Illuminate\Support\Facades\Log;
 
 class ServiceNowIncident extends ServiceNowModel
 {

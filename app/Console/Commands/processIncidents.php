@@ -6,6 +6,7 @@ use Illuminate\Console\Command;
 use App\Incident;
 use App\IncidentType;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class processIncidents extends Command
 {
