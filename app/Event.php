@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\State;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class Event extends Model
 {

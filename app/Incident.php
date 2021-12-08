@@ -12,6 +12,7 @@ use App\ServiceNowServer;
 use Carbon\Carbon;
 use GuzzleHttp\Client as GuzzleHttpClient;
 use App\IncidentType;
+use Illuminate\Support\Facades\Log;
 
 class Incident extends Model
 {
