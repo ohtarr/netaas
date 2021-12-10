@@ -165,7 +165,14 @@ class Incident extends Model
 /**/	
 	public function compileString($string)
 	{
-		$server = ServiceNowServer::where('name',$this->name)->first();
+		try
+		{
+			$server = ServiceNowServer::where('name',$this->name)->first();
+		} catch(\Exception $e) {
+			$message = "INCIDENT ID " . $this->id . " Failed to obtain SERVER data from Service-Now";
+			print $message . "\n";
+			Log::info($message);
+		}
 		if($server)
 		{
 			$server_desc = $server->short_description;
