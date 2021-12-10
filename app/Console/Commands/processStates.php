@@ -57,7 +57,7 @@ class processStates extends Command
 	//Look for existing DEVICE incident, if exists assign states to it.
 	public static function processExistingDevice()
 	{
-		$message = "Processing Existing Devices";
+		$message = "processStates Processing Existing Devices";
 		print $message . "\n";
 		Log::info($message);
 		//Get all states that are not already assigned to an incident and foreach through them.

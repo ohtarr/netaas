@@ -10,7 +10,15 @@ class ServiceNowIncident extends ServiceNowModel
 	protected $guarded = [];
 
 	public $table = "incident";
-	
+
+	public function __construct(array $attributes = [])
+	{
+			$this->snowbaseurl = env('SNOW_API_URL');
+			$this->snowusername = env("SNOW_USERNAME");
+			$this->snowpassword = env("SNOW_PASSWORD");
+			parent::__construct($attributes);
+	}
+
 	public function close($msg)
 	{
 		$message = "ServiceNowIncident ID " . $this->sys_id . " Close";
