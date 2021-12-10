@@ -13,6 +13,14 @@ class ServiceNowLocation extends ServiceNowModel
 
 	public $table = "cmn_location";
 
+	public function __construct(array $attributes = [])
+	{
+			$this->snowbaseurl = env('SNOW_API_URL');
+			$this->snowusername = env("SNOW_USERNAME");
+			$this->snowpassword = env("SNOW_PASSWORD");
+			parent::__construct($attributes);
+	}
+
 	public function getContact()
 	{
 		if(isset($this->contact["value"]))

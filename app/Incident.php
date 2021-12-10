@@ -351,7 +351,7 @@ class Incident extends Model
 /**/
 	public function createTicket()
 	{
-		$message = "INCIDENT ID " . $this->id . " Creating Service-Now Incident for incident ID ";
+		$message = "INCIDENT ID " . $this->id . " Creating Service-Now Incident for incident ID " . $this->id;
 		print $message . "\n";
 		Log::info($message);
 		$location = $this->get_location();
