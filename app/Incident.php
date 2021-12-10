@@ -165,20 +165,6 @@ class Incident extends Model
 /**/	
 	public function compileString($string)
 	{
-		try
-		{
-			$server = ServiceNowServer::where('name',$this->name)->first();
-			if($server)
-			{
-				$server_desc = $server->short_description;
-			} else {
-				$server_desc = "NO VALID SERVER";
-			}
-		} catch(\Exception $e) {
-			$message = "INCIDENT ID " . $this->id . " Failed to obtain SERVER data from Service-Now";
-			print $message . "\n";
-			Log::info($message);
-		}
 		$location = $this->get_location();
 		if($location)
 		{
@@ -222,7 +208,6 @@ class Incident extends Model
 		$result = preg_replace('/{{timestamp}}/', Carbon::now()->toDateTimeString(), $result);
 		//$result = preg_replace('/{{incident_type}/', IncidentType::find($this->incident_type_id)->name, $result);
 		$result = preg_replace('/{{company_threshold}}/', env('COMPANY_OUTAGE_COUNT'), $result);
-		$result = preg_replace('/{{server_desc}}/', $server_desc, $result);
 		return $result;
 	}
 
