@@ -168,16 +168,16 @@ class Incident extends Model
 		try
 		{
 			$server = ServiceNowServer::where('name',$this->name)->first();
+			if($server)
+			{
+				$server_desc = $server->short_description;
+			} else {
+				$server_desc = "NO VALID SERVER";
+			}
 		} catch(\Exception $e) {
 			$message = "INCIDENT ID " . $this->id . " Failed to obtain SERVER data from Service-Now";
 			print $message . "\n";
 			Log::info($message);
-		}
-		if($server)
-		{
-			$server_desc = $server->short_description;
-		} else {
-			$server_desc = "NO VALID SERVER";
 		}
 		$location = $this->get_location();
 		if($location)
