@@ -250,6 +250,10 @@ class processStates extends Command
 						$sitedevicestate->save();
 					}
 				}
+			} else {
+				$message = "processStates SITE:" . $site->name . " ID:" . $site->id . " Did not detect more than 1 alert for site.  SiteNetworkStates: " . $siteNetworkStates->count() . " SiteStates: " . $siteStates->count() . "unresolvedSiteStates " . $unresolvedSiteStates->count();
+				print $message . "\n";
+				Log::info($message);
 			}
 		}
 	}
