@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Incident;
 use Carbon\Carbon;
 use App\ServiceNowLocation;
+use Illuminate\Support\Facades\Log;
 
 class State extends Model
 {
@@ -29,10 +30,17 @@ class State extends Model
 
 	public function get_location()
 	{
-		$location = ServiceNowLocation::where("name","=",$this->get_sitecode())->first();
+		$location = null;
+		try
+		{
+			$location = ServiceNowLocation::where("name","=",$this->get_sitecode())->first();
+		} catch(\Exception $e) {
+		
+		}
 		if (!$location) {
-			//throw new \Exception('Location not found for sitecode with name ' . $this->get_sitecode());
-			print "Location not found for sitecode with name " . $this->get_sitecode() . "\n";
+			$message = "STATE ID: " . $this->id . " Unable to locate ServiceNowLocation " . $this->get_sitecode();
+			print $message . "\n";
+			Log::info($message);
         }
 		//Return the sitecode!
 		return $location;
