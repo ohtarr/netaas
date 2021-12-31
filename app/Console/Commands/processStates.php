@@ -212,7 +212,7 @@ class processStates extends Command
 			//If there is more than 1 state that match sitecode, create a SITE incident.
 			if($siteNetworkStates->count() >= 1 && $siteStates->count() > 1 && $unresolvedSiteStates->count() > 0)
 			{
-				$message = "processStates Detected more than 1 alert state from site " . $state->get_sitecode() . ". Creating a SITE outage";
+				$message = "processStates STATE: " . $state->device_name . " ID: " . $state->id . "Detected more than 1 alert state from site " . $state->get_sitecode() . ". Creating a SITE outage";
 				print $message . "\n";
 				Log::info($message);
 				//Get ServiceNowLocation for this state.
@@ -251,7 +251,7 @@ class processStates extends Command
 					}
 				}
 			} else {
-				$message = "processStates STATE:" . $state->name . " ID:" . $state->id . " Did not detect more than 1 alert for site.  SiteNetworkStates: " . $siteNetworkStates->count() . " SiteStates: " . $siteStates->count() . "unresolvedSiteStates " . $unresolvedSiteStates->count();
+				$message = "processStates STATE:" . $state->device_name . " ID:" . $state->id . " Did not detect more than 1 alert for site.  SiteNetworkStates: " . $siteNetworkStates->count() . " SiteStates: " . $siteStates->count() . " unresolvedSiteStates " . $unresolvedSiteStates->count();
 				print $message . "\n";
 				Log::info($message);
 			}
