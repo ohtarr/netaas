@@ -21,6 +21,14 @@ class ServiceNowLocation extends ServiceNowModel
 			parent::__construct($attributes);
 	}
 
+	public function isActive()
+	{
+		if($this->u_network_mob_date && !$this->u_network_demob_date)
+		{
+			return true;
+		}		
+	}
+
 	public function getContact()
 	{
 		if(isset($this->contact["value"]))

@@ -6,6 +6,7 @@ use Illuminate\Console\Command;
 use App\State;
 use App\Incident;
 use App\IncidentType;
+use App\ServiceNowLocation;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 
@@ -151,45 +152,69 @@ class processStates extends Command
 		$message = "processStates Processing New company outage";
 		print $message . "\n";
 		Log::info($message);
-		//Look for COMPANY_CRITICAL incidentType.  If it doesn't exist, exit the function.
-		$inctype = IncidentType::getIncidentTypeByName("COMPANY_CRITICAL");
+		//get unassigned delayed states for intitial check.
 		$states = State::getUnassignedStatesDelayed();
 		if($states->isEmpty())
 		{
 			return;
 		}
-		//Get all unassigned states.
-		$states = State::getUnassignedStates();
+		//Get ALL unassigned states.
+		$unassignedstates = State::getUnassignedStates();
 		$sites = [];
-		$devices = $states->groupBy('device_name');
+		$devices = $unassignedstates->groupBy('device_name');
 		//print_r($devices);
-		foreach($devices as $name => $device)
+		$alertsites = [];
+		foreach($devices as $devicename => $devicestates)
 		{
-			//List of SITES for each state.  Used to determine number of SITES currently in alarm state.
-			$sites[] = substr($name,0,8);
+			$sitecode = substr($devicename,0,8);
+			if($alertsites[$sitecode])
+			{
+				$alertsites[$sitecode]['states'] = $devicestates;
+				continue;
+			}
+			$location = ServiceNowLocation::where('name',"=",$sitecode)->first();
+			if(!$location)
+			{
+				continue;
+			}
+			if(!$location->isActive())
+			{
+				continue;
+			}
+			if($location->u_priority == 0)
+			{
+				continue;
+			}
+
+			$alertsites[$sitecode]['location'] = $location;
+			$alertsites[$sitecode]['states'] = $devicestates;
 		}
-		$sites = array_unique($sites);  //Remove duplicates to get an accurate site count.
 		//If the count of unassigned sites in alert state is larger than the configured COMPANY_OUTAGE_COUNT, create a company outage incident
-		if(count($sites) < env("COMPANY_OUTAGE_COUNT"))
+		if(count($alertsites) < env("COMPANY_OUTAGE_COUNT"))
 		{
 			return;
 		}
 		$message = "processStates Detected more than " . env("COMPANY_OUTAGE_COUNT") . " alert states.  Creating a new COMPANY OUTAGE.";
 		print $message . "\n";
 		Log::info($message);
+		//Look for COMPANY_CRITICAL incidentType.  If it doesn't exist, exit the function.
+		$inctype = IncidentType::getIncidentTypeByName("COMPANY_CRITICAL");
 		$newinc = Incident::create([
 			'name'		=>	"company",
 			'type_id'	=>	$inctype->id,
 		]);
 		//Assign ALL unassigned states to this company outage incident.
-		foreach($states as $state)
+		foreach($alertsites as $sitecode => $sitedata)
 		{
-			$message = "processStates Adding state " . $state->device_name . " with ID " . $state->id . " to company outage incident ID " . $newinc->id;
-			print $message . "\n";
-			Log::info($message);
-			$state->incident_id = $newinc->id;
-			$state->processed = 1;
-			$state->save();
+			foreach($sitedata['states'] as $state)
+			{
+				$message = "processStates Adding state " . $state->device_name . " with ID " . $state->id . " to company outage incident ID " . $newinc->id;
+				print $message . "\n";
+				Log::info($message);
+				$state->incident_id = $newinc->id;
+				$state->processed = 1;
+				$state->save();				
+			}
 		}
 		return $newinc;
 	}
