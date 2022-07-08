@@ -184,14 +184,23 @@ class processStates extends Command
 
 			if(!$location)
 			{
+				$message = "No valid location found for sitecode " . $sitecode . "Not adding to potential company outage.";
+				print $message . "\n";
+				Log::info($message);
 				continue;
 			}
 			if(!$location->isActive())
 			{
+				$message = "Location is not ACTIVE for sitecode " . $sitecode . "Not adding to potential company outage.";
+				print $message . "\n";
+				Log::info($message);
 				continue;
 			}
 			if($location->u_priority == 0)
 			{
+				$message = "Location is set for NO MONITORING for sitecode " . $sitecode . "Not adding to potential company outage.";
+				print $message . "\n";
+				Log::info($message);
 				continue;
 			}
 
