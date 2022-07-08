@@ -167,12 +167,21 @@ class processStates extends Command
 		foreach($devices as $devicename => $devicestates)
 		{
 			$sitecode = substr($devicename,0,8);
-			if($alertsites[$sitecode])
+			if(isset($alertsites[$sitecode]))
 			{
 				$alertsites[$sitecode]['states'] = $devicestates;
 				continue;
 			}
-			$location = ServiceNowLocation::where('name',"=",$sitecode)->first();
+			try
+			{
+				$location = ServiceNowLocation::where('name',"=",$sitecode)->first();
+			} catch(\Exception $e) {
+				$message = "Failed to get location for sitecode " . $sitecode;
+				print $message . "\n";
+				Log::info($message);
+				continue;
+			}
+
 			if(!$location)
 			{
 				continue;
