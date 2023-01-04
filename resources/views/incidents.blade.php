@@ -45,7 +45,7 @@
 			<td>{{ $incident->name }}</td>
 			<td>{{ $incident->type_id }}</td>
 			<td>{{ $incident->resolved }}</td>
-			<td>{{ $incident->ticket_id }}</td>
+			<td><a target="_blank" href="{{ url($incident->get_ticket_url()) }}">{{ $incident->ticket_id }}</a></td>
 			<td>{{ $incident->created_at }}</td>
 			<td>{{ $incident->updated_at }}</td>
 			<td>{{ $incident->deleted_at }}</td>

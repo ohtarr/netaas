@@ -495,6 +495,11 @@ class Incident extends Model
 		}
 	}
 
+	public function get_ticket_url()
+	{
+		return env('SNOW_URL') . "/nav_to.do?uri=incident.do?sys_id=" . $this->ticket_id;
+	}
+
 	/*
 	public function process()
 	{
