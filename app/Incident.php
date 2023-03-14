@@ -371,6 +371,7 @@ class Incident extends Model
 			"assigned_to"		=>	"",
 			"caller_id"			=>	$this->IncidentType->caller_id,
 			"assignment_group"	=>	$this->IncidentType->group_id,
+			"category"			=>	"network",
 		]);
 		if($ticket)
 		{
