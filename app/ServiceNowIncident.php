@@ -24,7 +24,7 @@ class ServiceNowIncident extends ServiceNowModel
 		$message = "ServiceNowIncident ID " . $this->sys_id . " Close";
 		print $message . "\n";
 		Log::info($message);
-		$this->u_cause_code = "Environment";
+		$this->close_code = "Closed/Resolved by Caller";
 		$this->close_notes = $msg;
 		$this->state = 6;
 		$this->save();
