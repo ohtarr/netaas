@@ -173,7 +173,7 @@ class Incident extends Model
 				$contact = $location->getContact();
 			} catch(\Exception $e) {
 			}
-			if($contact)
+			if(isset($contact))
 			{
 				$contactdesc = "Site Contact: \nName: " . $contact->name . "\nPhone: " . $contact->phone . "\nMobile: " . $contact->mobile_phone . "\nEmail: " . $contact->email . "\n";
 			} else {
