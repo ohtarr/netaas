@@ -168,7 +168,11 @@ class Incident extends Model
 		$location = $this->get_location();
 		if($location)
 		{
-			$contact = $location->getContact();
+			try
+			{
+				$contact = $location->getContact();
+			} catch(\Exception $e) {
+			}
 			if($contact)
 			{
 				$contactdesc = "Site Contact: \nName: " . $contact->name . "\nPhone: " . $contact->phone . "\nMobile: " . $contact->mobile_phone . "\nEmail: " . $contact->email . "\n";
@@ -347,21 +351,41 @@ class Incident extends Model
 		print $message . "\n";
 		Log::info($message);
 		$location = $this->get_location();
-		if($location)
+		if(!$location)
 		{
-			if($location->u_active == "false" || $location->u_priority == 0)
-			{
-				$message = "INCIDENT ID " . $this->id . " Location is deactivated or set to NO MONITORING, purging from system";
-				print $message . "\n";
-				Log::info($message);
-				$this->purge();
-				return null;
-			}
+			$message = "INCIDENT ID " . $this->id . " Location not found, purging from system";
+			print $message . "\n";
+			Log::info($message);
+			$this->purge();
+			return null;
+		}
+		if(!$location->u_network_mob_date)
+		{
+			$message = "INCIDENT ID " . $this->id . " Location is not active yet, purging from system";
+			print $message . "\n";
+			Log::info($message);
+			$this->purge();
+			return null;
+		}
+		if($location->u_network_demob_date)
+		{
+			$message = "INCIDENT ID " . $this->id . " Location has been demobilized, purging from system";
+			print $message . "\n";
+			Log::info($message);
+			$this->purge();
+			return null;
+		}
+		if($location->u_priority == 0)
+		{
+			$message = "INCIDENT ID " . $this->id . " Location is set to NO MONITORING, purging from system";
+			print $message . "\n";
+			Log::info($message);
+			$this->purge();
+			return null;
 		}
 		$message = "INCIDENT ID " . $this->id . " Creating Ticket of type " . $this->IncidentType->name;
 		print $message . "\n";
 		Log::info($message);
-		print "Creating Ticket of type " . $this->IncidentType->name . "\n";
 		$ticket = ServiceNowIncident::create([
 			"cmdb_ci"			=>	$this->IncidentType->ci_id,
 			"impact"			=>	$this->IncidentType->impact,
