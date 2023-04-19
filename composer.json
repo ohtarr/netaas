@@ -10,7 +10,7 @@
         "fideloper/proxy": "~3.3",
         "geerlingguy/ping": "^1.1",
         "guzzlehttp/guzzle": "~6.0",
-        "laravel/framework": "5.5.*",
+        "laravel/framework": "5.8.*",
         "laravel/tinker": "~1.0",
         "nanigans/single-table-inheritance": "0.8.*",
         "ohtarr/service-now-model": "dev-master"
