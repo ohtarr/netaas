@@ -61,13 +61,13 @@ class ServiceNowLocation extends ServiceNowModel
 		$verb = 'GET';
 		$url = env('WEATHER_API_BASE_URL') . "?lat=" . $this->latitude . "&lon=" . $this->longitude . "&appid=" . env('WEATHER_API_KEY') . "&units=imperial";
 		//Perform the api call
-		$response = $client->request($verb, $url);
-		//get the body contents and decode json into an array.
 		try
 		{
+			$response = $client->request($verb, $url);
+			//get the body contents and decode json into an array.
 			$array = json_decode($response->getBody()->getContents(), true);
 		} catch(\Exception $e) {
-		
+			return null;
 		}
 		if($array)
 		{
