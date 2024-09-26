@@ -55,7 +55,7 @@ class ServiceNowIncident extends ServiceNowModel
 	
 	public function isOpen()
 	{
-		if ($this->state == 4 || $this->state == 6 || $this->state == 7)
+		if ($this->state == 4 || $this->state == 6 || $this->state == 7 || $this->state == 8)
 		{
 			return false;
 		} else {
