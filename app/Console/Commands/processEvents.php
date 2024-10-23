@@ -3,7 +3,7 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
-use App\Event;
+use App\Models\Event;
 use Illuminate\Support\Facades\Log;
 
 class processEvents extends Command

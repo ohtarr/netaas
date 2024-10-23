@@ -8,21 +8,21 @@
     <!-- BOOTSTRAP -->
     <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <style>
-		table {
-			font-family: arial, sans-serif;
-			border-collapse: collapse;
-			width: 100%;
-		}
+                table {
+                        font-family: arial, sans-serif;
+                        border-collapse: collapse;
+                        width: 100%;
+                }
 
-		td, th {
-			border: 1px solid #dddddd;
-			text-align: left;
-			padding: 4px;
-		}
+                td, th {
+                        border: 1px solid #dddddd;
+                        text-align: left;
+                        padding: 4px;
+                }
 
-		tr:nth-child(even) {
-			background-color: #dddddd;
-		}
+                tr:nth-child(even) {
+                        background-color: #dddddd;
+                }
     </style>
 </head>
 <body class="container">
@@ -37,7 +37,7 @@ State Unassigned: {{ $unassignedstates }}<br>
 
 <br>
 Incident TOTAL: {{ $incidents }}<br>
-Incident SITE:	{{ $siteincidents }}<br>
+Incident SITE:  {{ $siteincidents }}<br>
 Incident DEVICE: {{ $deviceincidents }}<br>
 
 
