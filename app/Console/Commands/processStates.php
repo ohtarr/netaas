@@ -3,10 +3,10 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
-use App\State;
-use App\Incident;
-use App\IncidentType;
-use App\ServiceNowLocation;
+use App\Models\State;
+use App\Models\Incident;
+use App\Models\IncidentType;
+use App\Models\ServiceNowLocation;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 

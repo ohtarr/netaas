@@ -3,8 +3,8 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
-use App\Incident;
-use App\IncidentType;
+use App\Models\Incident;
+use App\Models\IncidentType;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 
@@ -164,8 +164,12 @@ class processIncidents extends Command
             if($ticket)
             {
                 //if the service now ticket is CLOSED (not resolved, but completely closed or cancelled)
-                if($ticket->state == 6 || $ticket->state == 7 || $ticket->state == 8)
+                if($ticket->state == 7 || $ticket->state == 4)
                 {
+                    //Purge this incident and all related states.
+                    $incident->purge();
+                //If the SNOW ticket is in RESOLVED state
+                } elseif ($ticket->state == 6) {
                     //IF INCIDENT IS NOT RESOLVED
                     if($incident->isOpen())
                     {
@@ -179,13 +183,10 @@ class processIncidents extends Command
                         {
                             //Purge all states attached to this incident and the incident.
                             $incident->purge();
-                        } elseif($ticket->state == 6) {
+                        } else {
                             //Purge all states attached to this incident.
                             $incident->purgeStates();
                             $incident->close();
-                        } elseif($ticket->state == 7 || $ticket->state == 8) {
-                            //Purge all states attached to this incident and the incident.
-                            $incident->purge();
                         }
                     //IF INCIDENT IS RESOLVED
                     } else {
