@@ -14,7 +14,7 @@ class ChangeEventsTable extends Migration
     public function up()
     {
         Schema::table('events', function (Blueprint $table) {
-            $table->string('entity_desc', 10000)->change();
+            $table->string('entity_desc', 10000)->nullable()->change();
         });
     }
 
