@@ -56,7 +56,7 @@ class processIncidents extends Command
     public function processClosed($incident)
     {
         $ticket = $incident->get_ticket();
-        if($ticket->state == 7 || $ticket->state == 4)
+        if($ticket->state == 7 || $ticket->state == 8)
         {
             //Purge this incident and all related states.
             $incident->purgeStates();
@@ -112,10 +112,6 @@ class processIncidents extends Command
         {
             return null;
         }
-        if ($ticket->state == 6 && $ticket->state == 7 && $ticket->state == 4)
-        {
-            return null;
-        }
         if($incident->isOpen())
         {
             $unpstates = $incident->get_unprocessed_states();
@@ -164,9 +160,14 @@ class processIncidents extends Command
             if($ticket)
             {
                 //if the service now ticket is CLOSED (not resolved, but completely closed or cancelled)
-                if($ticket->state == 7 || $ticket->state == 4)
+                if($ticket->state == 7 || $ticket->state == 8)
                 {
                     //Purge this incident and all related states.
+                    $msg = "Manual ticket closure was detected.  Clearing " . $incident->name . " from Netaas system.\n";
+                    $msg .= "Current status of States: \n";
+                    $msg .= $incident->compileStateSummary();
+                    //ADD COMMENT TO TICKET
+                    $ticket->add_comment($msg);
                     $incident->purge();
                 //If the SNOW ticket is in RESOLVED state
                 } elseif ($ticket->state == 6) {
