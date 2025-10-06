@@ -59,6 +59,29 @@ class EventsController extends Controller
 		return response()->json($event);
 	}
 
+	public function LibreNMS(Request $request)
+	{
+		$message = "Received new request from " . $request->ip() . ":\n";
+		$message .= $request;
+		Log::info($message);
+		$event = new Event;
+		$event->src_ip = substr($request->ip(),0,249);
+		$event->device_name = substr($request['device_name'],0,249);
+		$event->type = "NETWORK";
+		if($request['alert_state'] == 1)
+		{
+			$event->resolved = 0;
+		} else {
+			$event->resolved = 1;
+		}
+		$event->entity_type = substr($request['entity_type'],0,249);
+		$event->entity_name = substr($request['entity_name'],0,249);
+		$event->entity_desc = substr($request['entity_desc'],0,9999);
+
+		$event->save();
+		return response()->json($event);
+	}
+
 	public function Scom(Request $request)
 	{
 		$message = "Received new request from " . $request->ip() . ":\n";
