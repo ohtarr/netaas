@@ -55,7 +55,7 @@ class ServiceNowIncident extends ServiceNowModel
 	
 	public function isOpen()
 	{
-		if ($this->state == 4 || $this->state == 6 || $this->state == 7)
+		if ($this->state == 8 || $this->state == 6 || $this->state == 7)
 		{
 			return false;
 		} else {
@@ -100,7 +100,7 @@ class ServiceNowIncident extends ServiceNowModel
 				$ticket->save();
 			} else {
 				$ticket->add_comment('This ticket is orphaned from the Netaas system.  Closing.');
-				$ticket->state = 4;
+				$ticket->state = 8;
 				$ticket->caller_id = '5c004d166fe5110034cb07321c3ee442';
 				$ticket->save();
 			}
@@ -115,7 +115,7 @@ class ServiceNowIncident extends ServiceNowModel
 			if($ticket->active == 1)
 			{
 				print $ticket->number . "\n";
-				$ticket->state = 4;
+				$ticket->state = 8;
 				if($ticket->isDirty())
 				{
 					$ticket->save();
