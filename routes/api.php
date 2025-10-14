@@ -11,3 +11,4 @@ Route::get('/user', function (Request $request) {
 //Route::post('/netmon/', 'EventsController@Netmon');
 Route::post('/netmon/', [EventsController::class,"Netmon"]);
 Route::post('/librenms/', [EventsController::class,"LibreNMS"]);
+Route::post('/scom/', [EventsController::class,"Scom"]);
