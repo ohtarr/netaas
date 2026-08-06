@@ -47,7 +47,7 @@ class EventsController extends Controller
 		$event->type = "NETWORK";
 		if($request['ALERT_STATE'] == "ALERT")
 		{
-			$event->resolved = 0;		
+			$event->resolved = 0;
 		} else {
 			$event->resolved = 1;
 		}
@@ -64,21 +64,45 @@ class EventsController extends Controller
 		$message = "Received new request from " . $request->ip() . ":\n";
 		$message .= $request;
 		Log::info($message);
-		$event = new Event;
-		$event->src_ip = substr($request->ip(),0,249);
-		$event->device_name = substr($request['device_name'],0,249);
-		$event->type = "NETWORK";
-		if($request['alert_state'] == 1)
-		{
-			$event->resolved = 0;
-		} else {
-			$event->resolved = 1;
-		}
-		$event->entity_type = substr($request['entity_type'],0,249);
-		$event->entity_name = substr($request['entity_name'],0,249);
-		$event->entity_desc = substr($request['entity_desc'],0,9999);
 
-		$event->save();
+		// LibreNMS sends pretty-printed JSON with structural newlines, which json_decode handles fine.
+		// Read the raw body and decode directly. Only fall back to sanitizing if the initial decode
+		// fails (e.g. literal unescaped newlines inside a string value).
+		$raw = $request->getContent();
+		$array = json_decode($raw, true);
+
+		// Fallback: if raw decode fails, try sanitizing literal newlines inside string values
+		if (json_last_error() !== JSON_ERROR_NONE) {
+			$sanitized = preg_replace('/(?<!\\\\)\n/', '\\n', $raw);
+			$array = json_decode($sanitized, true);
+		}
+
+		if (json_last_error() !== JSON_ERROR_NONE || empty($array['faults']) || !is_array($array['faults'])) {
+			Log::warning('LibreNMS request could not be parsed or has no faults from ' . $request->ip() . ': ' . json_last_error_msg());
+			return response()->json(['message' => 'No faults to process'], 200);
+		}
+
+		foreach($array['faults'] as $fault)
+		{
+	                $event = new Event;
+	                $event->src_ip = substr($request->ip(),0,249);
+	                $event->device_name = substr($array['device_name'],0,249);
+	                $event->type = "NETWORK";
+	                if($array['alert_state'] == 1)
+	                {
+	                        $event->resolved = 0;
+	                } else {
+	                        $event->resolved = 1;
+	                }
+	                $event->entity_type = substr($fault['entity_type'],0,249);
+	                $event->entity_name = substr($fault['entity_name'],0,249);
+	                $event->entity_desc = substr($fault['entity_desc'],0,9999);
+	                $event->save();
+					if(isset($event->id))
+					{
+						Log::info("Created event ID ". $event->id);
+					}
+		}
 		return response()->json($event);
 	}
 
